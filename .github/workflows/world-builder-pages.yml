@@ -1,0 +1,51 @@
+name: World Builder Pages (experimental)
+on:
+  push:
+    branches: [experiment/world-2d-design-20261012]
+    paths: ['world-builder/**', '.github/workflows/world-builder-pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages-world-builder
+  cancel-in-progress: true
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare versioned cache-resistant Pages artifact
+        env:
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os,json,shutil,pathlib,hashlib
+          root=pathlib.Path('world-builder')
+          out=pathlib.Path('_site')
+          shutil.copytree(root,out)
+          sha=os.environ['BUILD_SHA']
+          app=(out/'app.js').read_text()
+          assert app.count('__BUILD_SHA__')==1
+          (out/'app.js').write_text(app.replace('__BUILD_SHA__',sha))
+          for p in ['app.js','style.css']:
+              data=(out/p).read_bytes()
+              suffix=hashlib.sha256(data).hexdigest()[:12]
+              target=p.rsplit('.',1)[0]+'.'+suffix+'.'+p.rsplit('.',1)[1]
+              (out/target).write_bytes(data)
+              html=(out/'index.html').read_text().replace('./'+p,'./'+target)
+              (out/'index.html').write_text(html)
+          (out/'latest.html').write_text((out/'index.html').read_text())
+          (out/'build.json').write_text(json.dumps({'sha':sha,'entry':'latest.html'}))
+          (out/'.nojekyll').write_text('')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
