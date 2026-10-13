@@ -39,6 +39,14 @@ jobs:
               (out/target).write_bytes(data)
               html=(out/'index.html').read_text().replace('./'+p,'./'+target)
               (out/'index.html').write_text(html)
+          assembly=(out/'assembly.js').read_text()
+          assert assembly.count('__BUILD_SHA__')==1
+          assembly=assembly.replace('__BUILD_SHA__',sha)
+          suffix=hashlib.sha256(assembly.encode()).hexdigest()[:12]
+          target='assembly.'+suffix+'.js'
+          (out/target).write_text(assembly)
+          page=(out/'assembly.html').read_text().replace('./assembly.js','./'+target)
+          (out/'assembly.html').write_text(page)
           (out/'latest.html').write_text((out/'index.html').read_text())
           (out/'build.json').write_text(json.dumps({'sha':sha,'entry':'latest.html'}))
           (out/'.nojekyll').write_text('')
