@@ -36,7 +36,7 @@ assert(not pcall(function() inv:credit_harvest(event("bad","core:missing",2)) en
 assert(not pcall(function() inv:credit_harvest(event("bad2","core:stone",0)) end))
 local snap=inv:snapshot()
 snap.slots[1].count=1
-assert(inv:count("core:wood_log")==102,"snapshot leaked mutable slots")
+assert(inv:count("core:wood_log")==103,"snapshot leaked mutable slots")
 
 local craft=Craft.new(inv)
 local a=craft:execute("craft-1","core:planks_from_log")

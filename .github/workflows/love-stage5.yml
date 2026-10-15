@@ -41,6 +41,8 @@ jobs:
         run: |
           lua5.4 tests/stage5_systems.lua
           luajit tests/stage5_systems.lua
+          lua5.4 tests/stage5_end_to_end.lua
+          luajit tests/stage5_end_to_end.lua
       - name: Real LÖVE Stage4 gameplay smoke (no regression)
         env:
           OSMAN_LOVE_STAGE4_SMOKE: "1"
@@ -49,3 +51,19 @@ jobs:
           set -euo pipefail
           timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/stage5-stage4-regression.log
           grep -q 'LOVE_STAGE4_SMOKE_OK' /tmp/stage5-stage4-regression.log
+      - name: Real LÖVE Stage5 seeded vertical-slice PNG smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          cp -a game/love/. "$root/"
+          cp "$root/systems/demo_stage5.lua" "$root/main.lua"
+          OSMAN_LOVE_STAGE5_SMOKE=1 timeout 120s xvfb-run -a love "$root" 2>&1 | tee /tmp/stage5-love.log
+          grep -q LOVE_STAGE5_SMOKE_OK /tmp/stage5-love.log
+          find "$HOME/.local/share/love" -name stage5-workbench-smoke.png -exec cp {} /tmp/stage5-workbench-smoke.png \;
+          test -s /tmp/stage5-workbench-smoke.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: love-stage5-workbench-prototype
+          path: /tmp/stage5-workbench-smoke.png
+          if-no-files-found: error
