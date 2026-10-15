@@ -1,73 +1,122 @@
-local Scene = require("world.scene")
-local Biomes = require("world.biomes")
-local Renderer = require("world.renderer")
-local App = require("core.app")
-
-local app
-local ci_smoke = os.getenv("OSMAN_LOVE_SMOKE") == "1"
-local ci_rendered_frames = 0
-
-local function safe_area(width, height)
-  if love.window and love.window.getSafeArea then
-    local x, y, w, h = love.window.getSafeArea()
-    if x and w and w > 0 and h > 0 then
-      return { x = x, y = y, w = w, h = h }
-    end
+-- Integrated procedural world and playable placeholder player.
+local Query=require("world.world_query")
+local Stream=require("world.stream")
+local Terrain=require("world.terrain_renderer")
+local Adapter=require("world.collision_adapter")
+local Controller=require("player.controller")
+local Joystick=require("player.joystick")
+local Camera=require("core.camera")
+local Iso=require("world.iso")
+local query=Query.new(20261015)
+local solid=Adapter.new(query,8)
+local stream=Stream.new(query,{size=256,step=32,max_loaded=100,build_budget=5})
+local camera=Camera.new()
+local joystick=Joystick.new(64)
+local player
+local w,h=720,1100
+local fingers={}
+local smoke=os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRATION_SMOKE")=="1"
+local frames=0
+local stats={loaded=0,needed=0,pending=0}
+local route_status=""
+local function spawn()
+  for radius=0,512,16 do
+    for y=-radius,radius,16 do for x=-radius,radius,16 do
+      if radius==0 or math.max(math.abs(x),math.abs(y))==radius then
+        local ok,p=pcall(Controller.new,solid,{x=x,y=y,radius=5,speed=96})
+        if ok then return p end
+      end
+    end end
   end
-  return { x = 0, y = 0, w = width, h = height }
+  error("No safe player spawn found within 512 world units")
 end
-
 function love.load()
-  Biomes.validate()
-  local w, h = love.graphics.getDimensions()
-  app = App.new(Scene, w, h, safe_area(w, h))
+  w,h=love.graphics.getDimensions()
+  player=spawn()
+  camera.x,camera.y=player.x,player.y
 end
-
-function love.resize(w, h)
-  if app then app:resize(w, h, safe_area(w, h)) end
+function love.resize(width,height) w,h=width,height end
+local function keyboard()
+  local sx=(love.keyboard.isDown("d","right") and 1 or 0)-(love.keyboard.isDown("a","left") and 1 or 0)
+  local sy=(love.keyboard.isDown("s","down") and 1 or 0)-(love.keyboard.isDown("w","up") and 1 or 0)
+  local jx,jy=joystick:axis()
+  if joystick.id~=nil then sx,sy=jx,jy end
+  local wx,wy=Iso.unproject(sx,sy)
+  local mag=math.sqrt(wx*wx+wy*wy)
+  if mag>0 and (sx~=0 or sy~=0) then wx,wy=wx/mag,wy/mag end
+  return wx,wy
 end
-
 function love.update(dt)
-  app:update(dt, {
-    up = love.keyboard.isDown("w", "up"),
-    down = love.keyboard.isDown("s", "down"),
-    left = love.keyboard.isDown("a", "left"),
-    right = love.keyboard.isDown("d", "right"),
-  })
+  local ax,ay=keyboard()
+  player:update(dt,ax,ay)
+  camera.x,camera.y=player.x,player.y
+  stats=stream:update(camera,w,h)
 end
-
 function love.draw()
-  Renderer.draw(Scene, app.camera, app.selected, app.width, app.height)
-  app.hud:draw(app.selected, app.camera.zoom)
-  if ci_smoke then
-    ci_rendered_frames = ci_rendered_frames + 1
-    if ci_rendered_frames == 3 then
-      print("LOVE_RENDER_SMOKE_OK " .. tostring(app.width) .. "x" .. tostring(app.height))
-      io.stdout:flush()
-      love.event.quit()
-    end
+  Terrain.draw(stream,camera,w,h)
+  local px,py=camera:project(player.x,player.y,w,h)
+  local g=love.graphics
+  g.setColor(.06,.12,.15,.55)
+  g.ellipse("fill",px,py+4,player.radius*camera.zoom*1.4,player.radius*camera.zoom*.65)
+  g.setColor(.98,.76,.28)
+  g.polygon("fill",px,py-31,px-11,py-4,px,py+2,px+11,py-4)
+  g.setColor(.19,.22,.29)
+  g.circle("fill",px,py-36,8)
+  g.setColor(1,1,1)
+  g.print("WORLD + PLAYER / seed "..query.seed,16,18)
+  g.print(string.format("Chunks %d/%d  State %s  Direction %s",stats.loaded,stats.needed,player.state,player.facing),16,40)
+  g.print("WASD / arrows | Tap to walk | Wheel zoom | Touch joystick",16,62)
+  if route_status~="" then g.print(route_status,16,84) end
+  local bx,by=94,h-112
+  g.setColor(.2,.3,.34,.6)
+  g.circle("fill",bx,by,72)
+  g.setColor(.95,.95,.9,.7)
+  g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
+  g.setColor(1,1,1)
+  frames=frames+1
+  if smoke and frames>=6 and stats.loaded>0 then
+    print(string.format("LOVE_INTEGRATION_SMOKE_OK frames=%d chunks=%d player=(%.1f,%.1f)",frames,stats.loaded,player.x,player.y))
+    io.stdout:flush()
+    love.event.quit()
   end
 end
-
-function love.touchpressed(id, x, y) app:press(id, x, y) end
-function love.touchmoved(id, x, y) app:move(id, x, y) end
-function love.touchreleased(id, x, y) app:release(id, x, y) end
-
--- Ignore touch-synthesized mouse events; otherwise one finger becomes two pointers.
-function love.mousepressed(x, y, button, istouch)
-  if button == 1 and not istouch then app:press("mouse", x, y) end
+local function press(id,x,y)
+  fingers[id]={x=x,y=y,origin_x=x,origin_y=y,move=false}
+  if x<180 and y>h-240 and joystick.id==nil then
+    joystick:press(id,94,h-112)
+    joystick:move(id,x,y)
+    fingers[id].joystick=true
+  elseif next(fingers) and (function() local n=0;for _ in pairs(fingers) do n=n+1 end;return n end)()>=2 then
+    for _,p in pairs(fingers) do p.multi=true end
+  end
 end
-function love.mousemoved(x, y, _, _, istouch)
-  if not istouch then app:move("mouse", x, y) end
+local function move(id,x,y)
+  local p=fingers[id];if not p then return end
+  if p.joystick then joystick:move(id,x,y);return end
+  if (x-p.origin_x)^2+(y-p.origin_y)^2>100 then p.move=true end
+  p.x,p.y=x,y
 end
-function love.mousereleased(x, y, button, istouch)
-  if button == 1 and not istouch then app:release("mouse", x, y) end
+local function release(id,x,y)
+  local p=fingers[id];if not p then return end
+  if p.joystick then joystick:release(id)
+  elseif not p.move and not p.multi then
+    local gx,gy=camera:unproject(x,y,w,h)
+    local ok,reason=player:navigate_to(gx,gy,16,1024)
+    route_status=ok and "Navigating" or ("No path: "..tostring(reason))
+  end
+  fingers[id]=nil
 end
-function love.wheelmoved(_, delta)
-  local x, y = love.mouse.getPosition()
-  app:wheel(delta, x, y)
+function love.touchpressed(id,x,y) press(id,x,y) end
+function love.touchmoved(id,x,y) move(id,x,y) end
+function love.touchreleased(id,x,y) release(id,x,y) end
+function love.mousepressed(x,y,b,istouch) if b==1 and not istouch then press("mouse",x,y) end end
+function love.mousemoved(x,y,_,_,istouch) if not istouch then move("mouse",x,y) end end
+function love.mousereleased(x,y,b,istouch) if b==1 and not istouch then release("mouse",x,y) end end
+function love.wheelmoved(_,dy)
+  local x,y=love.mouse.getPosition()
+  camera:zoom_at(1.15^dy,x,y,w,h)
 end
 function love.keypressed(key)
-  if key == "r" or key == "home" then app.camera:reset() end
-  if key == "escape" then app.selected = nil end
+  if key=="r" then camera.x,camera.y=player.x,player.y;camera.zoom=1.7 end
+  if key=="escape" then player:stop_navigation() end
 end
