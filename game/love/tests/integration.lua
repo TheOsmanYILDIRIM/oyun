@@ -81,3 +81,15 @@ end}
 local blocked_path,blocked_reason=Path.find(thinwall,5,0,32,0,0,16,128)
 assert(blocked_path==nil and blocked_reason=='start_connector_blocked',tostring(blocked_reason))
 print('WORLD_PLAYER_CONNECTOR_OK')
+
+-- World-aligned geometry on either side of a chunk seam at x=256 and x=-256.
+local seam_field={field={channel=function(_,x,y,name) return 256-x end}}
+local seam=Adapter.new(seam_field,8)
+assert(seam:blocked(31,0),"water before positive chunk seam missing")
+assert(not seam:blocked(33,0),"dry past positive seam blocked")
+local negative_field={field={channel=function(_,x,y,name) return -256-x end}}
+local neg=Adapter.new(negative_field,8)
+assert(neg:blocked(-33,0),"water before negative seam missing")
+assert(not neg:blocked(-31,0),"dry past negative seam blocked")
+assert(seam:blocked(31,0)==Adapter.new(seam_field,8):blocked(31,0),"cache regeneration drift")
+print("WORLD_PLAYER_CHUNK_SEAM_OK")
