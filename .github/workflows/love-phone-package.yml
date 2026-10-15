@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Verify source equals verified game main
         run: |
           test "$(git rev-parse HEAD:game/love)" = "$(git rev-parse e182b0f4036c6a10a7209e2ddac27be832455425:game/love)"
