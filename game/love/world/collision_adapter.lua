@@ -19,8 +19,8 @@ function WorldCollision:blocked(ix,iy)
     -- Sampling footprint centre, corners and quarter points is conservative
     -- at the chosen collision resolution; not an exact contour intersection.
     value=false
-    for _,u in ipairs({.125,.5,.875}) do
-      for _,v in ipairs({.125,.5,.875}) do
+    for _,u in ipairs({0,.125,.25,.375,.5,.625,.75,.875,1}) do
+      for _,v in ipairs({0,.125,.25,.375,.5,.625,.75,.875,1}) do
         if not self.world:is_walkable(x+u*c,y+v*c) then value=true;break end
       end
       if value then break end

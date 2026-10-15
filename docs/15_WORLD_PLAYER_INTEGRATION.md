@@ -19,3 +19,4 @@ All coordinates used for physics/pathfinding are world units.
 This integration remains an experiment pending review of actual real LOVE
 CI smoke, branch protection, visual screenshot inspection, and edge-case tests.
 Android real-device, FPS and APK builds have not been verified.
+\nThe water adapter now samples a 9x9 lattice including cell edges, still an approximation rather than an exact mathematical boundary. CI separately captures a seeded diagnostic view; biome richness must be assessed from its pixels, not success logs alone. Touch joystick placement considers LÖVE safe area when present.\n

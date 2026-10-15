@@ -27,9 +27,21 @@ jobs:
           grep -q LOVE_INTEGRATION_SMOKE_OK /tmp/love-log.txt
           find "$HOME/.local/share/love" -name world-player-smoke.png -exec cp {} /tmp/world-player-smoke.png \;
           test -s /tmp/world-player-smoke.png
+      - name: Multi-biome diagnostic screenshot
+        env:
+          OSMAN_LOVE_INTEGRATION_SMOKE: "1"
+          OSMAN_LOVE_BIOME_SMOKE: "1"
+        run: |
+          set -o pipefail
+          timeout 90s xvfb-run -a love game/love 2>&1 | tee /tmp/love-biome-log.txt
+          grep -q LOVE_INTEGRATION_SMOKE_OK /tmp/love-biome-log.txt
+          find "$HOME/.local/share/love" -name world-player-biome-smoke.png -exec cp {} /tmp/world-player-biome-smoke.png \;
+          test -s /tmp/world-player-biome-smoke.png
       - name: Upload render evidence
         uses: actions/upload-artifact@v4
         with:
           name: world-player-smoke
-          path: /tmp/world-player-smoke.png
+          path: |
+            /tmp/world-player-smoke.png
+            /tmp/world-player-biome-smoke.png
           if-no-files-found: error

@@ -55,3 +55,19 @@ assert(Collision.can_stand(synthetic,0,0,1) and Collision.can_stand(synthetic,16
 local sx,sy,hit=Collision.move(synthetic,0,0,16,0,1)
 assert(hit and sx<7,"swept wall penetration")
 print("WORLD_PLAYER_EDGE_OK")
+
+-- Conservative organic-boundary raster check for 8-unit collision cells.
+local inspected,wet=0,0
+for y=-512,512,8 do for x=-512,512,8 do
+  local ix,iy=math.floor(x/8),math.floor(y/8)
+  for _,uv in ipairs({{0,0},{.25,.25},{.5,.5},{.75,.75},{1,1}}) do
+    local wx,wy=x+uv[1]*8,y+uv[2]*8
+    if not q:is_walkable(wx,wy) then
+      wet=wet+1
+      assert(a:blocked(ix,iy),'sampled water not blocked')
+    end
+    inspected=inspected+1
+  end
+end end
+assert(wet>0,'no water sampled in boundary test')
+print('WORLD_PLAYER_WATER_SAMPLES_OK',inspected,wet)

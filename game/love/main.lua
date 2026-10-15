@@ -20,6 +20,7 @@ local frames=0
 local screenshot_done=false
 local stats={loaded=0,needed=0,pending=0}
 local route_status=""
+local debug_view=os.getenv("OSMAN_LOVE_BIOME_SMOKE")=="1"
 local function spawn()
   for radius=0,512,16 do
     for y=-radius,radius,16 do for x=-radius,radius,16 do
@@ -35,6 +36,7 @@ function love.load()
   w,h=love.graphics.getDimensions()
   player=spawn()
   camera.x,camera.y=player.x,player.y
+  if debug_view then camera.x,camera.y=-960,-960 end
 end
 function love.resize(width,height) w,h=width,height end
 local function keyboard()
@@ -50,7 +52,7 @@ end
 function love.update(dt)
   local ax,ay=keyboard()
   player:update(dt,ax,ay)
-  camera.x,camera.y=player.x,player.y
+  if not debug_view then camera.x,camera.y=player.x,player.y end
   stats=stream:update(camera,w,h)
 end
 function love.draw()
@@ -68,7 +70,7 @@ function love.draw()
   g.print(string.format("Chunks %d/%d  State %s  Direction %s",stats.loaded,stats.needed,player.state,player.facing),16,40)
   g.print("WASD / arrows | Tap to walk | Wheel zoom | Touch joystick",16,62)
   if route_status~="" then g.print(route_status,16,84) end
-  local bx,by=94,h-112
+  local bx,by=joystick_center()
   g.setColor(.2,.3,.34,.6)
   g.circle("fill",bx,by,72)
   g.setColor(.95,.95,.9,.7)
@@ -78,17 +80,29 @@ function love.draw()
   if smoke and frames>=20 and stats.loaded>0 and stats.pending==0 then
     if not screenshot_done then
       screenshot_done=true
-      love.graphics.captureScreenshot("world-player-smoke.png")
+      love.graphics.captureScreenshot(debug_view and "world-player-biome-smoke.png" or "world-player-smoke.png")
     end
     print(string.format("LOVE_INTEGRATION_SMOKE_OK frames=%d chunks=%d player=(%.1f,%.1f)",frames,stats.loaded,player.x,player.y))
     io.stdout:flush()
     love.event.quit()
   end
 end
+local function safe_area()
+  if love.window and love.window.getSafeArea then
+    local sx,sy,sw,sh=love.window.getSafeArea()
+    if sx and sy and sw and sh and sw>0 and sh>0 then return sx,sy,sw,sh end
+  end
+  return 0,0,w,h
+end
+local function joystick_center()
+  local sx,sy,sw,sh=safe_area()
+  return sx+math.min(94,sw*.25),sy+sh-112
+end
 local function press(id,x,y)
   fingers[id]={x=x,y=y,origin_x=x,origin_y=y,move=false}
-  if x<180 and y>h-240 and joystick.id==nil then
-    joystick:press(id,94,h-112)
+  local bx,by=joystick_center()
+  if (x-bx)^2+(y-by)^2<90^2 and joystick.id==nil then
+    joystick:press(id,bx,by)
     joystick:move(id,x,y)
     fingers[id].joystick=true
   elseif next(fingers) and (function() local n=0;for _ in pairs(fingers) do n=n+1 end;return n end)()>=2 then
