@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua 5.4
-        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 love xvfb
       - name: Syntax check all Lua modules
         run: find game/love -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
       - name: Execute biome unit tests
@@ -24,3 +24,9 @@ jobs:
       - name: Execute input and camera unit tests
         working-directory: game/love
         run: lua5.4 tests/runtime.lua
+      - name: Smoke-test actual LOVE render loop
+        shell: bash
+        run: |
+          set -euo pipefail
+          OSMAN_LOVE_SMOKE=1 timeout 25s xvfb-run -a -s '-screen 0 1280x1440x24' love game/love 2>&1 | tee /tmp/oyun-love-smoke.log
+          grep -q 'LOVE_RENDER_SMOKE_OK' /tmp/oyun-love-smoke.log

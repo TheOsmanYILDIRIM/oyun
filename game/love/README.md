@@ -37,8 +37,9 @@ find . -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
 ```
 
 GitHub Actions `LOVE biome core validation` performs Lua syntax and unit
-tests on the experiment branch. A CI pass verifies Lua logic, **not** visual
-LÖVE rendering or Android compatibility. Those require real engine and device
+tests and launches the real LÖVE render loop under Xvfb for three frames
+on the experiment branch. CI proves startup/render smoke, **not** visual
+correctness or Android compatibility. Those require real engine and device
 tests in subsequent work.
 
 ## Boundaries

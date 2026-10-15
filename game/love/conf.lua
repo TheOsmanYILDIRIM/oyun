@@ -1,6 +1,5 @@
 function love.conf(t)
   t.identity = "osman-biome-core"
-  t.version = "11.5"
   t.window.title = "Oyun / 2D World"
   t.window.width = 720
   t.window.height = 1100
