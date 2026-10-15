@@ -7,6 +7,9 @@ on:
       - 'data/catalog/**'
       - 'scripts/generate_love_stage5_catalog.py'
       - 'docs/18_LOVE_STAGE5_AND_SAVE_V2.md'
+      - 'schemas/love-world-v2.schema.json'
+      - 'data/templates/empty_love_world_v2.json'
+      - 'tests/test_love_world_v2_contract.py'
       - '.github/workflows/love-stage5.yml'
   workflow_dispatch:
 permissions:

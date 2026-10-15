@@ -85,8 +85,15 @@ function Inventory:count(id)
 end
 
 function Inventory:snapshot()
-  return {version=1,catalog_version=Catalog.version(),capacity=self.capacity,
-    slots=copy_slots(self.slots,self.capacity)}
+  -- Dense record array is JSON-safe: sparse Lua arrays are not.
+  local records={}
+  for i=1,self.capacity do
+    local stack=self.slots[i]
+    if stack then records[#records+1]={
+      slot=i,def_id=stack.def_id,count=stack.count} end
+  end
+  return {version=1,catalog_version=Catalog.version(),
+    capacity=self.capacity,slots=records}
 end
 
 function Inventory:preview()

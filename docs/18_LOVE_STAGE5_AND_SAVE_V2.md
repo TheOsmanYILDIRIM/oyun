@@ -103,3 +103,15 @@ production save açılmamalıdır.
    sahnesi, ardından main entegrasyonu gereklidir.
 3. Disk save, Android test, multiplayer ve senkronize host authority **henüz
    uygulanmadı**. Aşama 6 kalıcılık, Aşama 7 Android, Aşama 8 ağ kapsamıdır.
+
+## Additive executable v2 schema
+
+`schemas/love-world-v2.schema.json` and
+`data/templates/empty_love_world_v2.json` are **new** files defining the
+future save serialization. `tests/test_love_world_v2_contract.py` validates
+the template, old v1 distinction, seed/version invariants, placed UUID refs,
+inventory slot uniqueness/stack maxima and unknown IDs using JSON Schema
+plus semantic validation. The schema is an interface contract only:
+no `love.filesystem` writes, migration, replays or durability implementation
+have been added. Inventory `:snapshot()` now exports a dense list of
+`{slot,def_id,count}` entries for JSON-safe round trips.

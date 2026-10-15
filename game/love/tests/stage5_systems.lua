@@ -35,6 +35,7 @@ assert(inv:credit_harvest(event("h4","core:wood_log",1)))
 assert(not pcall(function() inv:credit_harvest(event("bad","core:missing",2)) end))
 assert(not pcall(function() inv:credit_harvest(event("bad2","core:stone",0)) end))
 local snap=inv:snapshot()
+assert(snap.slots[1].slot==1 and snap.catalog_version==Catalog.version())
 snap.slots[1].count=1
 assert(inv:count("core:wood_log")==103,"snapshot leaked mutable slots")
 
