@@ -15,6 +15,7 @@ local joystick=Joystick.new(64)
 local player
 local w,h=720,1100
 local fingers={}
+local pinch_distance=nil
 local smoke=os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRATION_SMOKE")=="1"
 local frames=0
 local screenshot_done=false
@@ -106,8 +107,13 @@ local function press(id,x,y)
     joystick:press(id,bx,by)
     joystick:move(id,x,y)
     fingers[id].joystick=true
-  elseif next(fingers) and (function() local n=0;for _ in pairs(fingers) do n=n+1 end;return n end)()>=2 then
-    for _,p in pairs(fingers) do p.multi=true end
+  else
+    local n=0
+    for _,p in pairs(fingers) do if not p.joystick then n=n+1 end end
+    if n>=2 then
+      for _,p in pairs(fingers) do if not p.joystick then p.multi=true end end
+      pinch_distance=nil
+    end
   end
 end
 local function move(id,x,y)
@@ -134,6 +140,7 @@ local function release(id,x,y)
     route_status=ok and "Navigating" or ("No path: "..tostring(reason))
   end
   fingers[id]=nil
+  pinch_distance=nil
   local n=0
   for _,q in pairs(fingers) do n=n+1 end
   if n==1 then for _,q in pairs(fingers) do q.multi=true end end

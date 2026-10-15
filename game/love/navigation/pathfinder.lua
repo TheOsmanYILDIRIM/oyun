@@ -24,6 +24,14 @@ function P.find(query,sx,sy,gx,gy,r,cell,max_nodes)
   end
   if not C.can_stand(query,sx,sy,r) then return nil,'start_blocked' end
   if not free(ax,ay) then return nil,'start_cell_blocked' end
+  -- The real player may stand between grid nodes; its first waypoint must
+  -- be reachable by the same swept-footprint physics.
+  if ax~=bx or ay~=by then
+    local fx,fy,hit=C.move(query,sx,sy,ax*cell-sx,ay*cell-sy,r)
+    if hit or math.abs(fx-ax*cell)>1e-5 or math.abs(fy-ay*cell)>1e-5 then
+      return nil,'start_connector_blocked'
+    end
+  end
   if not free(bx,by) then return nil,'goal_blocked' end
   local start=key(ax,ay)
   local nodes={[start]={x=ax,y=ay,g=0,f=heuristic(ax,ay,bx,by)}}

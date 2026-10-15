@@ -89,3 +89,13 @@ for iy=-5,5 do for ix=-5,5 do
 end end
 assert(wet_fixture>0,'synthetic water fixture has no water')
 print('WORLD_PLAYER_WATER_SAMPLES_OK',inspected,wet)
+
+-- A* must reject a blocked connector between non-grid start and first grid node.
+local thinwall={obstacles=function(_,x1,y1,x2,y2)
+  local rect={x=3,y=-2,w=1,h=4}
+  if x1<rect.x+rect.w and x2>rect.x and y1<rect.y+rect.h and y2>rect.y then return {rect} end
+  return {}
+end}
+local blocked_path,blocked_reason=Path.find(thinwall,5,0,32,0,0,16,128)
+assert(blocked_path==nil and blocked_reason=='start_connector_blocked',tostring(blocked_reason))
+print('WORLD_PLAYER_CONNECTOR_OK')
