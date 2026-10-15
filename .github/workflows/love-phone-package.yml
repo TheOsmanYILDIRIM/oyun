@@ -1,0 +1,60 @@
+name: Build Android-openable LOVE package
+on:
+  push:
+    branches: [experiment/love-phone-bundle-20261015]
+  workflow_dispatch:
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source equals verified game main
+        run: |
+          test "$(git rev-parse HEAD:game/love)" = "$(git rev-parse e182b0f4036c6a10a7209e2ddac27be832455425:game/love)"
+          test -s game/love/main.lua
+          test -s game/love/conf.lua
+      - name: Package root-level Lua files into LOVE archive
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          from hashlib import sha256
+          root = Path('game/love')
+          files = sorted(p for p in root.rglob('*.lua') if 'tests' not in p.relative_to(root).parts)
+          assert len(files) >= 20, 'incomplete game modules'
+          out = Path('dist/oyun-stage4-phone.love')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          with ZipFile(out, 'w', ZIP_DEFLATED, compresslevel=9) as z:
+              for file in files:
+                  z.write(file, file.relative_to(root).as_posix())
+          with ZipFile(out) as z:
+              assert z.testzip() is None, 'ZIP CRC mismatch'
+              entries = set(z.namelist())
+              assert {'main.lua', 'conf.lua', 'world/world_query.lua',
+                      'world/stream.lua', 'objects/harvesting.lua',
+                      'objects/renderer.lua', 'player/controller.lua'} <= entries
+              assert not any(x.startswith('game/love/') or x.startswith('tests/') for x in entries)
+          print('LOVE_PACKAGE_OK', out.stat().st_size, sha256(out.read_bytes()).hexdigest(), len(files))
+          PY
+      - name: Install LÖVE and headless display
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq love xvfb
+      - name: Run actual packaged archive using LÖVE
+        env:
+          OSMAN_LOVE_STAGE4_SMOKE: "1"
+        run: |
+          set -o pipefail
+          timeout 100s xvfb-run -a love dist/oyun-stage4-phone.love 2>&1 | tee /tmp/phone-love-test.log
+          grep -q LOVE_STAGE4_SMOKE_OK /tmp/phone-love-test.log
+          find "$HOME/.local/share/love" -name world-objects-before.png -exec cp {} dist/phone-before.png \;
+          find "$HOME/.local/share/love" -name world-objects-smoke.png -exec cp {} dist/phone-after.png \;
+          test -s dist/phone-before.png
+          test -s dist/phone-after.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oyun-stage4-phone-love
+          path: |
+            dist/oyun-stage4-phone.love
+            dist/phone-before.png
+            dist/phone-after.png
+          if-no-files-found: error
+          retention-days: 30
