@@ -9,6 +9,7 @@ local Harvest=require("objects.harvesting")
 local Wallet=require("objects.wallet")
 local ObjectRenderer=require("objects.renderer")
 local Controller=require("player.controller")
+local Collision=require("physics.collision")
 local Joystick=require("player.joystick")
 local Camera=require("core.camera")
 local Iso=require("world.iso")
@@ -36,6 +37,7 @@ local selected_target=nil
 local command_number=0
 local safe_area
 local object_count=0
+local stage4_before=false
 local debug_view=os.getenv("OSMAN_LOVE_BIOME_SMOKE")=="1"
 local function spawn()
   for radius=0,512,16 do
@@ -53,6 +55,26 @@ function love.load()
   player=spawn()
   camera.x,camera.y=player.x,player.y
   if debug_view then camera.x,camera.y=-960,-960 end
+  if stage4_smoke then
+    -- Exercise the real touch-button interaction callback, not direct deplete.
+    local selected=false
+    for _,o in ipairs(objects:objects_in({min_x=-384,min_y=-384,max_x=384,max_y=384})) do
+      for _,direction in ipairs({{1,0},{-1,0},{0,1},{0,-1}}) do
+        local x=o.x+direction[1]*(o.radius+23)
+        local y=o.y+direction[2]*(o.radius+23)
+        if Collision.can_stand(solid,x,y,player.radius) then
+          player.x,player.y=x,y
+          camera.x,camera.y=x,y
+          local sx,sy,sw,sh=safe_area()
+          love.touchpressed("stage4_smoke",sx+sw-75,sy+sh-140)
+          love.touchreleased("stage4_smoke",sx+sw-75,sy+sh-140)
+          if selected_target then selected=true;break end
+        end
+      end
+      if selected then break end
+    end
+    assert(selected,"No valid touch-harvest fixture")
+  end
 end
 function love.resize(width,height) w,h=width,height end
 local function keyboard()
@@ -68,7 +90,7 @@ end
 function love.update(dt)
   local ax,ay=keyboard()
   player:update(dt,ax,ay)
-  if selected_target and not harvesting.active then
+  if selected_target and not harvesting.active and (not stage4_smoke or stage4_before) then
     local o=objects:get(selected_target)
     if not o or objects:is_depleted(selected_target) then selected_target=nil
     elseif (o.x-player.x)^2+(o.y-player.y)^2<=(harvesting.range+o.radius)^2 then
@@ -116,12 +138,20 @@ function love.draw()
   g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
   g.setColor(1,1,1)
   frames=frames+1
-  if smoke and frames>=20 and stats.loaded>0 and stats.pending==0 then
+  if stage4_smoke and not stage4_before and frames>=20
+     and stats.loaded>0 and stats.pending==0 then
+    stage4_before=true
+    love.graphics.captureScreenshot("world-objects-before.png")
+  end
+  if stage4_smoke and frames>1800 then error("Harvest smoke timed out before resource credit") end
+  if smoke and frames>=20 and stats.loaded>0 and stats.pending==0
+    and (not stage4_smoke or (stage4_before and
+      wallet:count("core:wood_log")+wallet:count("core:stone")>0)) then
     if not screenshot_done then
       screenshot_done=true
       love.graphics.captureScreenshot(stage4_smoke and "world-objects-smoke.png" or (debug_view and "world-player-biome-smoke.png" or "world-player-smoke.png"))
     end
-    print(string.format("%s frames=%d chunks=%d objects=%d player=(%.1f,%.1f)",stage4_smoke and "LOVE_STAGE4_SMOKE_OK" or "LOVE_INTEGRATION_SMOKE_OK",frames,stats.loaded,object_count,player.x,player.y))
+    print(string.format("%s frames=%d chunks=%d objects=%d wood=%d stone=%d player=(%.1f,%.1f)",stage4_smoke and "LOVE_STAGE4_SMOKE_OK" or "LOVE_INTEGRATION_SMOKE_OK",frames,stats.loaded,object_count,wallet:count("core:wood_log"),wallet:count("core:stone"),player.x,player.y))
     io.stdout:flush()
     love.event.quit()
   end

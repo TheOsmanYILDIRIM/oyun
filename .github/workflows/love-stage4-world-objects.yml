@@ -35,10 +35,14 @@ jobs:
           timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/stage4-love.log
           grep -q LOVE_STAGE4_SMOKE_OK /tmp/stage4-love.log
           find "$HOME/.local/share/love" -name 'world-objects-smoke.png' -exec cp {} /tmp/world-objects-smoke.png \;
+          find "$HOME/.local/share/love" -name 'world-objects-before.png' -exec cp {} /tmp/world-objects-before.png \;
           test -s /tmp/world-objects-smoke.png
+          test -s /tmp/world-objects-before.png
       - name: Upload LÖVE screenshot
         uses: actions/upload-artifact@v4
         with:
           name: love-stage4-world-objects
-          path: /tmp/world-objects-smoke.png
+          path: |
+            /tmp/world-objects-smoke.png
+            /tmp/world-objects-before.png
           if-no-files-found: error
