@@ -66,8 +66,12 @@ function love.load()
           player.x,player.y=x,y
           camera.x,camera.y=x,y
           local sx,sy,sw,sh=safe_area()
+          local bx,by=joystick_center()
+          love.touchpressed("stage4_joystick",bx,by)
           love.touchpressed("stage4_smoke",sx+sw-75,sy+sh-140)
           love.touchreleased("stage4_smoke",sx+sw-75,sy+sh-140)
+          love.touchreleased("stage4_joystick",bx,by)
+          assert(joystick.id==nil,"joystick owner stuck after touch collection")
           if selected_target then selected=true;break end
         end
       end
@@ -209,9 +213,9 @@ local function press(id,x,y)
     fingers[id].joystick=true
   else
     local n=0
-    for _,p in pairs(fingers) do if not p.joystick then n=n+1 end end
+    for _,p in pairs(fingers) do if not p.joystick and not p.button then n=n+1 end end
     if n>=2 then
-      for _,p in pairs(fingers) do if not p.joystick then p.multi=true end end
+      for _,p in pairs(fingers) do if not p.joystick and not p.button then p.multi=true end end
       pinch_distance=nil
     end
   end
@@ -219,9 +223,10 @@ end
 local function move(id,x,y)
   local p=fingers[id];if not p then return end
   if p.joystick then joystick:move(id,x,y);return end
+  if p.button then return end
   if p.multi then
     local partner
-    for other,q in pairs(fingers) do if other~=id and not q.joystick then partner=q;break end end
+    for other,q in pairs(fingers) do if other~=id and not q.joystick and not q.button then partner=q;break end end
     if partner then
       local old=math.sqrt((p.x-partner.x)^2+(p.y-partner.y)^2)
       local new=math.sqrt((x-partner.x)^2+(y-partner.y)^2)
