@@ -4,6 +4,7 @@ on:
     branches: [experiment/world-2d-design-20261012]
     paths:
       - 'game/love/**'
+      - 'docs/13_LOVE_2D_RUNTIME_STAGE1.md'
       - '.github/workflows/love-biome-core.yml'
   workflow_dispatch:
 permissions:
@@ -20,3 +21,6 @@ jobs:
       - name: Execute biome unit tests
         working-directory: game/love
         run: lua5.4 tests/run.lua
+      - name: Execute input and camera unit tests
+        working-directory: game/love
+        run: lua5.4 tests/runtime.lua

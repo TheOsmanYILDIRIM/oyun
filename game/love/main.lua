@@ -1,27 +1,63 @@
-local scene=require("world.scene")
-local Iso=require("world.iso")
-local Biomes=require("world.biomes")
-local scale=1.7
-function love.load() Biomes.validate() end
-local function drawRegion(region,cx,cy)
- local points={}
- for _,p in ipairs(region.polygon) do
-  local x,y=Iso.project(p[1],p[2])
-  points[#points+1]=cx+x*scale
-  points[#points+1]=cy+y*scale
- end
- local b=Biomes.resolve(region.biome,region.variant)
- love.graphics.setColor(b.color)
- love.graphics.polygon("fill",points)
- love.graphics.setColor(.18,.25,.21)
- love.graphics.setLineWidth(2)
- love.graphics.polygon("line",points)
+local Scene = require("world.scene")
+local Biomes = require("world.biomes")
+local Renderer = require("world.renderer")
+local App = require("core.app")
+
+local app
+
+local function safe_area(width, height)
+  if love.window and love.window.getSafeArea then
+    local x, y, w, h = love.window.getSafeArea()
+    if x and w and w > 0 and h > 0 then
+      return { x = x, y = y, w = w, h = h }
+    end
+  end
+  return { x = 0, y = 0, w = width, h = height }
 end
+
+function love.load()
+  Biomes.validate()
+  local w, h = love.graphics.getDimensions()
+  app = App.new(Scene, w, h, safe_area(w, h))
+end
+
+function love.resize(w, h)
+  if app then app:resize(w, h, safe_area(w, h)) end
+end
+
+function love.update(dt)
+  app:update(dt, {
+    up = love.keyboard.isDown("w", "up"),
+    down = love.keyboard.isDown("s", "down"),
+    left = love.keyboard.isDown("a", "left"),
+    right = love.keyboard.isDown("d", "right"),
+  })
+end
+
 function love.draw()
- love.graphics.clear(.10,.15,.13)
- local w,h=love.graphics.getDimensions()
- for _,region in ipairs(scene.regions) do drawRegion(region,w*.5,h*.5) end
- love.graphics.setColor(1,1,1)
- love.graphics.print("Three authored biomes - textures not yet supplied",16,28)
+  Renderer.draw(Scene, app.camera, app.selected, app.width, app.height)
+  app.hud:draw(app.selected, app.camera.zoom)
 end
-function love.wheelmoved(_,dy) scale=math.max(.5,math.min(4,scale*(1+dy*.1))) end
+
+function love.touchpressed(id, x, y) app:press(id, x, y) end
+function love.touchmoved(id, x, y) app:move(id, x, y) end
+function love.touchreleased(id, x, y) app:release(id, x, y) end
+
+-- Ignore touch-synthesized mouse events; otherwise one finger becomes two pointers.
+function love.mousepressed(x, y, button, istouch)
+  if button == 1 and not istouch then app:press("mouse", x, y) end
+end
+function love.mousemoved(x, y, _, _, istouch)
+  if not istouch then app:move("mouse", x, y) end
+end
+function love.mousereleased(x, y, button, istouch)
+  if button == 1 and not istouch then app:release("mouse", x, y) end
+end
+function love.wheelmoved(_, delta)
+  local x, y = love.mouse.getPosition()
+  app:wheel(delta, x, y)
+end
+function love.keypressed(key)
+  if key == "r" or key == "home" then app.camera:reset() end
+  if key == "escape" then app.selected = nil end
+end
