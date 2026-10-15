@@ -16,7 +16,14 @@ function P.find(query,sx,sy,gx,gy,r,cell,max_nodes)
   local ax,ay=math.floor(sx/cell+.5),math.floor(sy/cell+.5)
   local bx,by=math.floor(gx/cell+.5),math.floor(gy/cell+.5)
   local function free(x,y) return C.can_stand(query,x*cell,y*cell,r) end
+  local function clear_edge(x0,y0,x1,y1)
+    local sx,sy=x0*cell,y0*cell
+    local ex,ey=x1*cell,y1*cell
+    local nx,ny,hit=C.move(query,sx,sy,ex-sx,ey-sy,r)
+    return not hit and math.abs(nx-ex)<1e-5 and math.abs(ny-ey)<1e-5
+  end
   if not C.can_stand(query,sx,sy,r) then return nil,'start_blocked' end
+  if not free(ax,ay) then return nil,'start_cell_blocked' end
   if not free(bx,by) then return nil,'goal_blocked' end
   local start=key(ax,ay)
   local nodes={[start]={x=ax,y=ay,g=0,f=heuristic(ax,ay,bx,by)}}
@@ -47,7 +54,8 @@ function P.find(query,sx,sy,gx,gy,r,cell,max_nodes)
       local k=key(x,y)
       if not closed[k] and free(x,y) and
         ((d[1]==0 or d[2]==0) or
-        (free(cur.x+d[1],cur.y) and free(cur.x,cur.y+d[2]))) then
+        (free(cur.x+d[1],cur.y) and free(cur.x,cur.y+d[2])))
+        and clear_edge(cur.x,cur.y,x,y) then
         local g=cur.g+((d[1]~=0 and d[2]~=0) and math.sqrt(2) or 1)
         if not nodes[k] or g<nodes[k].g-1e-9 then
           nodes[k]={x=x,y=y,g=g,f=g+heuristic(x,y,bx,by),parent=best}

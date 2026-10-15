@@ -39,3 +39,19 @@ for _,r in ipairs(a:obstacles(-128,-128,128,128)) do
   assert(not Collision.can_stand(a,cx,cy,0),"water obstacle did not block")
 end
 print("WORLD_PLAYER_NEGATIVE_OK")
+
+-- The obstacle cache cannot grow without limit as the camera roams.
+local bounded=Adapter.new(q,8)
+bounded.max_cache=32
+for i=0,120 do bounded:blocked(i,-i) end
+assert(bounded.cache_size<=32,"collision cache grew without bound")
+-- Ensure A* respects the exact swept-square footprint, not endpoints alone.
+local synthetic={obstacles=function(_,x1,y1,x2,y2)
+  local wall={x=7,y=-4,w=2,h=8}
+  if x1<wall.x+wall.w and x2>wall.x and y1<wall.y+wall.h and y2>wall.y then return {wall} end
+  return {}
+end}
+assert(Collision.can_stand(synthetic,0,0,1) and Collision.can_stand(synthetic,16,0,1))
+local sx,sy,hit=Collision.move(synthetic,0,0,16,0,1)
+assert(hit and sx<7,"swept wall penetration")
+print("WORLD_PLAYER_EDGE_OK")

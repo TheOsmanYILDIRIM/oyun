@@ -8,7 +8,7 @@ function WorldCollision.new(world,cell)
   assert(world and type(world.is_walkable)=="function", "world query required")
   cell=cell or 8
   assert(finite(cell) and cell>0 and cell<=32, "invalid collision cell")
-  return setmetatable({world=world,cell=cell,cache={}},WorldCollision)
+  return setmetatable({world=world,cell=cell,cache={},cache_size=0,max_cache=32768},WorldCollision)
 end
 function WorldCollision:blocked(ix,iy)
   local key=ix..":"..iy
@@ -25,7 +25,13 @@ function WorldCollision:blocked(ix,iy)
       end
       if value then break end
     end
+    if self.cache_size>=self.max_cache then
+      -- Derived values only; drop all to prevent unbounded growth on roaming.
+      self.cache={}
+      self.cache_size=0
+    end
     self.cache[key]=value
+    self.cache_size=self.cache_size+1
   end
   return value
 end
