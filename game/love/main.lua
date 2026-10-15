@@ -19,6 +19,7 @@ local smoke=os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRAT
 local frames=0
 local screenshot_done=false
 local stats={loaded=0,needed=0,pending=0}
+local joystick_center
 local route_status=""
 local debug_view=os.getenv("OSMAN_LOVE_BIOME_SMOKE")=="1"
 local function spawn()
@@ -94,7 +95,7 @@ local function safe_area()
   end
   return 0,0,w,h
 end
-local function joystick_center()
+joystick_center=function()
   local sx,sy,sw,sh=safe_area()
   return sx+math.min(94,sw*.25),sy+sh-112
 end
