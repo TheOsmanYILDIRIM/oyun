@@ -27,6 +27,12 @@ jobs:
         run: |
           lua5.4 tests/stage4_objects.lua
           luajit tests/stage4_objects.lua
+          lua5.4 tests/stage4_deep.lua
+          luajit tests/stage4_deep.lua
+          lua5.4 tests/stage4_hash_fixture.lua > /tmp/stage4-hash-54.txt
+          luajit tests/stage4_hash_fixture.lua > /tmp/stage4-hash-jit.txt
+          diff -u /tmp/stage4-hash-54.txt /tmp/stage4-hash-jit.txt
+          tail -n 1 /tmp/stage4-hash-54.txt
       - name: LOVE real renderer and screenshot
         env:
           OSMAN_LOVE_STAGE4_SMOKE: "1"
