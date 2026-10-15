@@ -56,40 +56,22 @@ local sx,sy,hit=Collision.move(synthetic,0,0,16,0,1)
 assert(hit and sx<7,"swept wall penetration")
 print("WORLD_PLAYER_EDGE_OK")
 
--- Conservative organic-boundary raster check for 8-unit collision cells.
-local inspected,wet=0,0
-for y=-512,512,8 do for x=-512,512,8 do
-  local ix,iy=math.floor(x/8),math.floor(y/8)
-  for _,uv in ipairs({{0,0},{.25,.25},{.5,.5},{.75,.75},{1,1}}) do
-    local wx,wy=x+uv[1]*8,y+uv[2]*8
-    if not q:is_walkable(wx,wy) then
-      wet=wet+1
-      assert(a:blocked(ix,iy),'sampled water not blocked')
-    end
-    inspected=inspected+1
-  end
-end end
--- A real seed can legitimately have no water in a bounded local window.
--- Independently assert an explicit synthetic organic water boundary.
-local synthetic_water={
-  is_walkable=function(_,x,y)
-    return ((x-3)^2+(y+5)^2)>24^2
-  end
-}
+-- Renderer and collider must consume identical Marching water triangles.
+local Marching=require("world.marching")
+local synthetic_water={field={channel=function(_,x,y,name)
+  assert(name=="water")
+  return 15-x  -- vertical shoreline at x=15; crosses a 32-unit cell
+end}}
 local water_adapter=Adapter.new(synthetic_water,8)
-local wet_fixture=0
-for iy=-5,5 do for ix=-5,5 do
-  for _,uv in ipairs({{0,0},{.25,.25},{.5,.5},{.75,.75},{1,1}}) do
-    local x,y=(ix+uv[1])*8,(iy+uv[2])*8
-    if not synthetic_water:is_walkable(x,y) then
-      assert(water_adapter:blocked(ix,iy),'synthetic water collision missing')
-      wet_fixture=wet_fixture+1
-    end
-  end
-end end
-assert(wet_fixture>0,'synthetic water fixture has no water')
-print('WORLD_PLAYER_WATER_SAMPLES_OK',inspected,wet)
-
+local tris=Marching.build(function(x,y) return synthetic_water.field:channel(x,y,"water") end,0,0,32,32,0).vertices
+assert(#tris>0 and #tris%3==0,"missing Marching geometry")
+assert(water_adapter:blocked(0,0),"filled water missing collider")
+assert(water_adapter:blocked(1,0),"shoreline coverage missing")
+assert(not water_adapter:blocked(3,0),"dry region blocked")
+assert(water_adapter:blocked(-1,0),"negative coordinate water coverage") 
+local twin=Adapter.new(synthetic_water,8)
+assert(water_adapter:blocked(1,0)==twin:blocked(1,0),"non deterministic water triangles")
+print("WORLD_PLAYER_MARCHING_COLLISION_OK")
 -- A* must reject a blocked connector between non-grid start and first grid node.
 local thinwall={obstacles=function(_,x1,y1,x2,y2)
   local rect={x=3,y=-2,w=1,h=4}
