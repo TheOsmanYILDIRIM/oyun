@@ -26,3 +26,16 @@ end
 local path,reason=Path.find(a,p.x,p.y,p.x,p.y,5,16,128)
 assert(path or reason=="goal_blocked",reason or "path failed")
 print("WORLD_PLAYER_INTEGRATION_OK",p.x,p.y)
+
+-- Fail-closed / negative-coordinates / chunk-independent collision regression.
+local b=Adapter.new(q,8)
+local before=a:obstacles(-300,-300,-250,-250)
+local after=b:obstacles(-300,-300,-250,-250)
+assert(#before==#after,"eviction-independent colliders differ")
+local bad=pcall(function() a:obstacles(0/0,0,1,1) end)
+assert(not bad,"nonfinite bounds permitted")
+for _,r in ipairs(a:obstacles(-128,-128,128,128)) do
+  local cx,cy=r.x+r.w*.5,r.y+r.h*.5
+  assert(not Collision.can_stand(a,cx,cy,0),"water obstacle did not block")
+end
+print("WORLD_PLAYER_NEGATIVE_OK")

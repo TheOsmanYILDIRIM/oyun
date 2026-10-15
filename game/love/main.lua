@@ -17,6 +17,7 @@ local w,h=720,1100
 local fingers={}
 local smoke=os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRATION_SMOKE")=="1"
 local frames=0
+local screenshot_done=false
 local stats={loaded=0,needed=0,pending=0}
 local route_status=""
 local function spawn()
@@ -75,6 +76,10 @@ function love.draw()
   g.setColor(1,1,1)
   frames=frames+1
   if smoke and frames>=6 and stats.loaded>0 then
+    if not screenshot_done then
+      screenshot_done=true
+      love.graphics.captureScreenshot("world-player-smoke.png")
+    end
     print(string.format("LOVE_INTEGRATION_SMOKE_OK frames=%d chunks=%d player=(%.1f,%.1f)",frames,stats.loaded,player.x,player.y))
     io.stdout:flush()
     love.event.quit()
@@ -93,6 +98,15 @@ end
 local function move(id,x,y)
   local p=fingers[id];if not p then return end
   if p.joystick then joystick:move(id,x,y);return end
+  if p.multi then
+    local partner
+    for other,q in pairs(fingers) do if other~=id and not q.joystick then partner=q;break end end
+    if partner then
+      local old=math.sqrt((p.x-partner.x)^2+(p.y-partner.y)^2)
+      local new=math.sqrt((x-partner.x)^2+(y-partner.y)^2)
+      if old>1 and new>1 then camera:zoom_at(new/old,(x+partner.x)/2,(y+partner.y)/2,w,h) end
+    end
+  end
   if (x-p.origin_x)^2+(y-p.origin_y)^2>100 then p.move=true end
   p.x,p.y=x,y
 end
@@ -105,6 +119,9 @@ local function release(id,x,y)
     route_status=ok and "Navigating" or ("No path: "..tostring(reason))
   end
   fingers[id]=nil
+  local n=0
+  for _,q in pairs(fingers) do n=n+1 end
+  if n==1 then for _,q in pairs(fingers) do q.multi=true end end
 end
 function love.touchpressed(id,x,y) press(id,x,y) end
 function love.touchmoved(id,x,y) move(id,x,y) end
