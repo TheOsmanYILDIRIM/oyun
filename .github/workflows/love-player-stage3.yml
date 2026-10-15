@@ -1,0 +1,34 @@
+name: LOVE player Stage 3
+on:
+  push:
+    branches: [experiment/player-systems-v1]
+    paths:
+      - 'game/love/player/**'
+      - 'game/love/physics/**'
+      - 'game/love/navigation/**'
+      - 'game/love/tests/player_stage3.lua'
+      - '.github/workflows/love-player-stage3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  player-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.4 and LÖVE
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 love xvfb
+      - name: Syntax check
+        run: find game/love -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+      - name: Stage 3 player physics tests
+        working-directory: game/love
+        run: lua5.4 tests/player_stage3.lua
+      - name: Existing biome and camera tests
+        working-directory: game/love
+        run: lua5.4 tests/run.lua && lua5.4 tests/runtime.lua
+      - name: Baseline LOVE render smoke (not player integration)
+        shell: bash
+        run: |
+          set -euo pipefail
+          OSMAN_LOVE_SMOKE=1 timeout 25s xvfb-run -a -s '-screen 0 1280x1440x24' love game/love 2>&1 | tee /tmp/love-smoke.log
+          grep -q 'LOVE_RENDER_SMOKE_OK' /tmp/love-smoke.log
