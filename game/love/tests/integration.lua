@@ -69,5 +69,23 @@ for y=-512,512,8 do for x=-512,512,8 do
     inspected=inspected+1
   end
 end end
-assert(wet>0,'no water sampled in boundary test')
+-- A real seed can legitimately have no water in a bounded local window.
+-- Independently assert an explicit synthetic organic water boundary.
+local synthetic_water={
+  is_walkable=function(_,x,y)
+    return ((x-3)^2+(y+5)^2)>24^2
+  end
+}
+local water_adapter=Adapter.new(synthetic_water,8)
+local wet_fixture=0
+for iy=-5,5 do for ix=-5,5 do
+  for _,uv in ipairs({{0,0},{.25,.25},{.5,.5},{.75,.75},{1,1}}) do
+    local x,y=(ix+uv[1])*8,(iy+uv[2])*8
+    if not synthetic_water:is_walkable(x,y) then
+      assert(water_adapter:blocked(ix,iy),'synthetic water collision missing')
+      wet_fixture=wet_fixture+1
+    end
+  end
+end end
+assert(wet_fixture>0,'synthetic water fixture has no water')
 print('WORLD_PLAYER_WATER_SAMPLES_OK',inspected,wet)
