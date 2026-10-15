@@ -22,7 +22,8 @@ jobs:
         env:
           OSMAN_LOVE_INTEGRATION_SMOKE: "1"
         run: |
-          timeout 45s xvfb-run -a love game/love 2>&1 | tee /tmp/love-log.txt
+          set -o pipefail
+          timeout 90s xvfb-run -a love game/love 2>&1 | tee /tmp/love-log.txt
           grep -q LOVE_INTEGRATION_SMOKE_OK /tmp/love-log.txt
           find "$HOME/.local/share/love" -name world-player-smoke.png -exec cp {} /tmp/world-player-smoke.png \;
           test -s /tmp/world-player-smoke.png

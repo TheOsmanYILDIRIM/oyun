@@ -75,7 +75,7 @@ function love.draw()
   g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
   g.setColor(1,1,1)
   frames=frames+1
-  if smoke and frames>=6 and stats.loaded>0 then
+  if smoke and frames>=20 and stats.loaded>0 and stats.pending==0 then
     if not screenshot_done then
       screenshot_done=true
       love.graphics.captureScreenshot("world-player-smoke.png")
