@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Confirm exact core game source
         run: |
           test "$(git rev-parse HEAD:game/love)" = "$(git rev-parse 388452c964c40c50e81fb42d58f8e100de4dcc85:game/love)"
