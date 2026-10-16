@@ -28,7 +28,7 @@ assert(h:begin("h1",id,25,0).ok)
 for _=1,40 do h:update(.1,25,0) end
 assert(h.commands.h1.status=="inventory_full" and not w.depleted)
 assert(#h:drain_events()==0 and full:count("core:wood_log")==0)
-local inv=Inventory.new(2)
+local inv=Inventory.new(3)
 local obj=world()
 local harvest=Harvest.new(obj,38,inv)
 assert(harvest:begin("h2",id,25,0).ok)

@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           OSMAN_LOVE_STAGE5_RUNTIME_SMOKE=1 timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/stage5-runtime.log
           grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK /tmp/stage5-runtime.log
-          find "$HOME/.local/share/love" -name stage5-production-touch.png -exec cp {} /tmp/stage5-production-touch.png \\;
+          find "$HOME/.local/share/love" -name stage5-production-touch.png -exec cp {} /tmp/stage5-production-touch.png \;
           test -s /tmp/stage5-production-touch.png
       - uses: actions/upload-artifact@v4
         with:
