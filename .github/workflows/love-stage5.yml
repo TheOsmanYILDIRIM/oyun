@@ -1,7 +1,7 @@
 name: LOVE Stage 5 inventory crafting building
 on:
   push:
-    branches: [experiment/stage5-inventory-crafting-v1]
+    branches: [main, experiment/stage5-inventory-crafting-v1]
     paths:
       - 'game/love/**'
       - 'data/catalog/**'
