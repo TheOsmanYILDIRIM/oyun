@@ -65,7 +65,7 @@ local function pure(data)
       local s1=bxor(bxor(ror(v,17),ror(v,19)),shr(v,10))
       w[i]=(w[i-16]+s0+w[i-7]+s1)%U
     end
-    local a,b,c,d,e,f,g,h=unpack and unpack(H) or table.unpack(H)
+    local a,b,c,d,e,f,g,h=(table.unpack or unpack)(H)
     for i=1,64 do
       local S1=bxor(bxor(ror(e,6),ror(e,11)),ror(e,25))
       local ch=bxor(band(e,f),band(bnot(e),g))

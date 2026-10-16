@@ -87,8 +87,7 @@ function M.decode(src)
     elseif c=="f" and src:sub(pos,pos+4)=="false" then pos=pos+5;return false
     elseif c=="n" and src:sub(pos,pos+3)=="null" then fail() -- Null not in save contract.
     else
-      local token=src:sub(pos):match("^%-?(?:)") -- replaced by strict match below
-      token=src:sub(pos):match("^%-?%d+%.?%d*[eE]?[%+%-]?%d*")
+      local token=src:sub(pos):match("^%-?%d+%.?%d*[eE]?[%+%-]?%d*")
       if not token or token=="" or not token:match("^%-?(0|[1-9]%d*)(%.%d+)?([eE][%+%-]?%d+)?$") then
         -- Lua patterns have no alternation: perform lexical check independently.
         local rest=src:sub(pos)
