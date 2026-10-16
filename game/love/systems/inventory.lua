@@ -100,7 +100,7 @@ function Inventory:preview()
   return copy_slots(self.slots,self.capacity)
 end
 
-function Inventory:commit_preview(preview)
+function Inventory:validate_preview(preview)
   -- Reject untrusted/corrupt staging data rather than silently importing it.
   assert(type(preview)=="table","missing preview")
   for k,s in pairs(preview) do
@@ -109,6 +109,11 @@ function Inventory:commit_preview(preview)
     local max=valid_stack(s.def_id,s.count)
     assert(s.count<=max,"stack overflow")
   end
+  return true
+end
+
+function Inventory:commit_preview(preview)
+  self:validate_preview(preview)
   self.slots=copy_slots(preview,self.capacity)
 end
 

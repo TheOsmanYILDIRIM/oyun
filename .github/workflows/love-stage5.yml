@@ -46,6 +46,8 @@ jobs:
           luajit tests/stage5_systems.lua
           lua5.4 tests/stage5_end_to_end.lua
           luajit tests/stage5_end_to_end.lua
+          lua5.4 tests/stage5_transactions.lua
+          luajit tests/stage5_transactions.lua
       - name: Real LÖVE Stage4 gameplay smoke (no regression)
         env:
           OSMAN_LOVE_STAGE4_SMOKE: "1"

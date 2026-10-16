@@ -83,6 +83,30 @@ local function dry_and_stable(terrain,box)
   return true
 end
 
+-- Side-effect-free placement validation used by touch ghost and actual placement.
+function Building:preview(def_id,x,y,rotation,player_x,player_y)
+  assert(finite(x) and finite(y) and finite(player_x) and finite(player_y),
+    "invalid placement coordinates")
+  local def=Catalog.item(def_id)
+  assert(def.kind=="structure" and def.placeable,"target must be a placeable structure")
+  local steps=def.placeable.rotation_steps
+  assert(type(rotation)=="number" and rotation==math.floor(rotation)
+    and rotation>=0 and rotation<steps,"invalid structure rotation")
+  if (x-player_x)^2+(y-player_y)^2>96^2 then return false,"out_of_range" end
+  local fw,fh=def.placeable.footprint[1],def.placeable.footprint[2]
+  if steps%2==0 and rotation%2==1 then fw,fh=fh,fw end
+  local box={x=x-fw*16,y=y-fh*16,w=fw*32,h=fh*32}
+  if overlap(box,{x=player_x-5,y=player_y-5,w=10,h=10}) then
+    return false,"player_overlap"
+  end
+  if not dry_and_stable(self.terrain,box) then return false,"invalid_surface" end
+  for _,solid in ipairs(self:obstacles(box.x,box.y,box.x+box.w,box.y+box.h)) do
+    if overlap(box,solid) then return false,"obstructed" end
+  end
+  if self.inventory:count(def_id)<1 then return false,"insufficient_materials" end
+  return true,"valid"
+end
+
 function Building:place(command_id,instance_id,def_id,x,y,rotation,player_x,player_y,owner_id)
   assert(type(command_id)=="string" and #command_id>0 and #command_id<=128,
     "invalid place command ID")
