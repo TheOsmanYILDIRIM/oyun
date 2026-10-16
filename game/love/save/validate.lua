@@ -108,7 +108,8 @@ function V.check(s,opts)
   end
   require_type(delta.objects,"delta objects","table")
   for id,state in pairs(delta.objects) do
-    local seed,x,y=type(id)=="string" and id:match("^worldobj:v1:(%d+):(-?%d+):(-?%d+)$")
+    local seed,x,y
+    if type(id)=="string" then seed,x,y=id:match("^worldobj:v1:(%d+):(-?%d+):(-?%d+)$") end
     if seed==nil or tostring(tonumber(seed))~=tostring(s.seed)
       or tonumber(x)==nil or tonumber(y)==nil then fail("invalid procedural object id") end
     exact(state,"delta object",fields({"depleted"}))
