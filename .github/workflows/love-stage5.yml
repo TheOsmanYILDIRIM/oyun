@@ -80,7 +80,9 @@ jobs:
           for viewport in 320x700 360x780; do
             OSMAN_LOVE_STAGE5_RUNTIME_SMOKE=1 OSMAN_STAGE5_DISPLAY="$viewport" timeout 120s xvfb-run -a love game/love 2>&1 | tee "/tmp/stage5-runtime-${viewport}.log"
             grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK "/tmp/stage5-runtime-${viewport}.log"
-            find "$HOME/.local/share/love" -name "stage5-production-touch-${viewport}.png" -exec cp {} "/tmp/stage5-production-touch-${viewport}.png" \\;
+            found="$(find "$HOME/.local/share/love" -name "stage5-production-touch-${viewport}.png" -print -quit)"
+            test -n "$found"
+            cp "$found" "/tmp/stage5-production-touch-${viewport}.png"
             test -s "/tmp/stage5-production-touch-${viewport}.png"
           done
       - uses: actions/upload-artifact@v4
