@@ -32,6 +32,7 @@ jobs:
           cp game/love/tests/save_love_smoke.lua "$RUNNER_TEMP/stage6-love/main.lua"
           xvfb-run -a timeout 45 love "$RUNNER_TEMP/stage6-love" 2>&1 | tee stage6-love-fs.log
           grep -q LOVE_FS_SAVE_V2_OK stage6-love-fs.log
+          grep -q LOVE_FS_RECOVERY_OK stage6-love-fs.log
       - name: Python save schema contract (unchanged production data)
         run: |
           set -o pipefail

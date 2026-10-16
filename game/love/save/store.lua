@@ -27,6 +27,25 @@ local function match_array(a,b)
   for i=1,#a do if a[i]~=b[i] then return false end end
   return true
 end
+-- Replay safety: previously committed identities and depletion never disappear
+-- or silently change when a new full-state checkpoint is accepted.
+local function monotonic(old,new)
+  local collections={"applied_commands","applied_transactions","placed_instances"}
+  for _,name in ipairs(collections) do
+    for id,entry in pairs(old[name]) do
+      if new[name][id]==nil or Json.encode(new[name][id])~=Json.encode(entry) then
+        return false,"ledger_or_instance_rewrite:"..name..":"..id
+      end
+    end
+  end
+  for id in pairs(old.generated_object_delta.objects) do
+    if new.generated_object_delta.objects[id]==nil then
+      return false,"restored_depleted_object"
+    end
+  end
+  if new.player.id~=old.player.id then return false,"player_identity_changed" end
+  return true
+end
 function Store.new(fs,opts)
   assert(type(fs)=="table" and type(fs.read)=="function"
      and type(fs.write)=="function" and type(fs.mkdir)=="function","fs port required")
@@ -91,6 +110,8 @@ function Store:verify_pointer(p,id)
     or j.world_revision~=p.revision or j.sequence~=p.sequence
     or j.state_sha256~=p.snapshot_sha256
     or type(j.command_ids)~="table" or type(j.transaction_ids)~="table"
+    or not (getmetatable(j.command_ids) and getmetatable(j.command_ids).__json_array)
+    or not (getmetatable(j.transaction_ids) and getmetatable(j.transaction_ids).__json_array)
     or not match_array(j.command_ids,sorted_revision_keys(state.applied_commands,p.revision))
     or not match_array(j.transaction_ids,sorted_revision_keys(state.applied_transactions,p.revision))
     then error("journal inconsistent with snapshot") end
@@ -143,6 +164,8 @@ function Store:commit(state)
       or state.generator_version~=old.generator_version then
         return false,"nonsequential_or_incompatible"
     end
+    local allowed,reason=monotonic(old,state)
+    if not allowed then return false,reason end
   elseif state.world_revision~=0 or state.journal_sequence~=0 then
     return false,"fresh_world_must_start_at_zero"
   end

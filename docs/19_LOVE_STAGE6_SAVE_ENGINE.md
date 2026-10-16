@@ -53,3 +53,5 @@ hiçbir göç/yazma işlemi yoktur. Dizinler LÖVE save sandbox içindedir.
 - CI'da Lua 5.4/LuaJIT sözleşme ve hata enjeksiyonu; gerçek LÖVE
   filesystem smoke yalnız CI sanal ekranda ve izole sandbox'ta test
   edilir. Bu mobil dayanıklılık kanıtı değildir.
+
+Ek idempotency kontrolü: bir kez checkpoint edilmiş `applied_commands`, `applied_transactions`, `placed_instances` kayıtları yeniden yazılamaz veya silinemez; `depleted=true` procedural delta geri alınamaz. Bu kural mutation replay / kaynak geri canlandırma riskini fail-closed yapar. Olası komut durum geçişleri (started → complete) için yeni tasarım gerekiyorsa yeni komut sürümü/kayıt yaklaşımı kararlaştırılmadan üretimde kullanılmaz.

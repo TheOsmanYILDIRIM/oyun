@@ -88,7 +88,7 @@ function V.check(s,opts)
   if not integer(inv.capacity,1,256) then fail("inventory capacity") end
   require_type(inv.slots,"slots","table")
   local mt=getmetatable(inv.slots)
-  if mt and not mt.__json_array then fail("inventory slots not JSON array") end
+  if not mt or not mt.__json_array then fail("inventory slots not JSON array") end
   if #inv.slots>inv.capacity then fail("too many inventory slots") end
   local used={}
   for _,slot in ipairs(inv.slots) do

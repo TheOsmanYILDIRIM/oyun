@@ -129,6 +129,33 @@ local function run()
   got,meta=store:load(uuid)
   check(meta.status=="ok" and equals(got,changed),"roundtrip latest state")
   check(fs.files[root().."previous.json"]==write_baseline,"previous remains last good")
+  local attempt=Json.decode(Json.encode(changed))
+  attempt.world_revision=3;attempt.journal_sequence=3
+  attempt.applied_commands["place:one"].status="failed"
+  ok,code=store:commit(attempt)
+  check(not ok and code:find("ledger_or_instance_rewrite",1,true),"durable command replay rewrite rejected")
+  attempt=Json.decode(Json.encode(changed))
+  attempt.world_revision=3;attempt.journal_sequence=3
+  attempt.applied_transactions["harvest:one"].amount=99
+  ok,code=store:commit(attempt)
+  check(not ok and code:find("ledger_or_instance_rewrite",1,true),"durable tx rewrite rejected")
+  attempt=Json.decode(Json.encode(changed))
+  attempt.world_revision=3;attempt.journal_sequence=3
+  attempt.generated_object_delta.objects["worldobj:v1:20261015:-3:4"]=nil
+  ok,code=store:commit(attempt)
+  check(not ok and code=="restored_depleted_object","depleted object must remain depleted")
+  attempt=Json.decode(Json.encode(changed))
+  attempt.world_revision=3;attempt.journal_sequence=3
+  attempt.placed_instances[Fixture.placed_id].x=22
+  ok,code=store:commit(attempt)
+  check(not ok and code:find("ledger_or_instance_rewrite",1,true),"placed instance identity immutable")
+  local malformed=Json.decode(Json.encode(changed))
+  malformed.player.inventory.slots={}
+  rejected(function()
+    Validate.check(malformed,{catalog=Fixture.catalog,generator_version=1,catalog_version=1})
+  end)
+  -- All failed replay attempts must leave the last committed pointer untouched.
+  check(fs.files[root().."current.json"]~=nil,"no pointer loss")
   local wrong_opt=Store.new(fs,{catalog=Fixture.catalog,generator_version=2,catalog_version=1})
   got,meta=wrong_opt:load(uuid)
   check(got==nil or meta.read_only,"generator mismatch read-only")
