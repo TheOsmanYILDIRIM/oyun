@@ -1,7 +1,7 @@
 -- Sorted 45-degree world-foot sprites; GPU-independent placement and mutable state.
 local Depth=require("player.depth")
 local R={}
-local CoreVisual=require("player.core_visual")
+local CoreVisual=require("player.plasma_video_visual")
 local function player_sprite(g,camera,w,h,player,visual_context)
   return CoreVisual.draw(g,camera,w,h,player,visual_context)
 end
