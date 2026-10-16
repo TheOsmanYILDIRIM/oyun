@@ -21,18 +21,20 @@ function H:layout(s)
     local px=x+pad
     local pw=w-pad*2
     local pt=y+141
-    add(out,"panel",px-3,pt-4,pw+6,330)
+    -- Shrink panel vertically on 320x700 without overlapping hotbar.
+    local scale=math.max(.7,math.min(1,(bar_y-pt-12)/325))
+    add(out,"panel",px-3,pt-4,pw+6,330*scale+5)
     local cell=(pw-12)/4
     for i=1,12 do
       local row=math.floor((i-1)/4)
       local col=(i-1)%4
-      add(out,"slot:"..i,px+col*(cell+4),pt+row*45,cell,42)
+      add(out,"slot:"..i,px+col*(cell+4),pt+row*45*scale,cell,42*scale)
     end
-    add(out,"recipe:core:planks_from_log",px,pt+145,pw,38)
-    add(out,"recipe:core:bench_from_planks",px,pt+188,pw,38)
-    add(out,"build",px,pt+237,pw,39)
-    add(out,"rotate",px,pt+283,(pw-8)/2,38)
-    add(out,"cancel",px+(pw+8)/2,pt+283,(pw-8)/2,38)
+    add(out,"recipe:core:planks_from_log",px,pt+145*scale,pw,38*scale)
+    add(out,"recipe:core:bench_from_planks",px,pt+188*scale,pw,38*scale)
+    add(out,"build",px,pt+237*scale,pw,39*scale)
+    add(out,"rotate",px,pt+283*scale,(pw-8)/2,38*scale)
+    add(out,"cancel",px+(pw+8)/2,pt+283*scale,(pw-8)/2,38*scale)
   end
   if self.placing then
     add(out,"confirm",x+w-136,y+h-355,120,54)
@@ -74,8 +76,8 @@ function H:draw(inv,craft,s,rotation,message)
       rounded(g,b,6,"line")
       g.setColor(.97,.95,.82)
       if stack then
-        g.printf(names[stack.def_id] or stack.def_id,b.x+2,b.y+6,b.w-4,"center")
-        g.printf("x"..stack.count,b.x+2,b.y+23,b.w-4,"center")
+        g.printf(names[stack.def_id] or stack.def_id,b.x+2,b.y+2,b.w-4,"center")
+        g.printf("x"..stack.count,b.x+2,b.y+b.h-18,b.w-4,"center")
       else
         label(g,tostring(idx),b)
       end

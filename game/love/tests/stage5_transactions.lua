@@ -57,4 +57,24 @@ local busy=craft:begin("c4","core:planks_from_log")
 assert(not busy.ok and busy.status=="busy")
 local v=Uuid.new(function(lo,hi) assert(lo==0 and hi==255) return 10 end)
 assert(v:match("^[%x]+%-%x+%-4%x+%-[89ab]%x+%-%x+$"))
-print("STAGE5_TRANSACTIONS_OK atomic harvest and timed craft")
+-- A schema-canonical synthetic station recipe checks late station loss.
+local original_recipe=Catalog.recipe
+Catalog.recipe=function(id)
+  if id=="test:station" then return {
+    id=id,inputs={{def_id="core:wood_log",count=1}},
+    outputs={{def_id="core:wood_plank",count=4}},
+    station_tags={"core:bench"},duration_ticks=12
+  } end
+  return original_recipe(id)
+end
+local gated=Craft.new(inv)
+local denied=gated:begin("gate-1","test:station",{})
+assert(denied.status=="station_required" and not denied.ok)
+local started=gated:begin("gate-2","test:station",{"core:bench"})
+assert(started.ok)
+assert(gated:update(.1,{})==nil)
+local failed=gated:update(.1,{})
+assert(failed and not failed.ok and failed.status=="station_required")
+assert(inv:count("core:wood_plank")==0)
+Catalog.recipe=original_recipe
+print("STAGE5_TRANSACTIONS_OK atomic harvest, timed craft, station gate")

@@ -37,6 +37,7 @@ local w,h=720,1100
 local fingers={}
 local pinch_distance=nil
 local stage5_runtime_smoke=os.getenv("OSMAN_LOVE_STAGE5_RUNTIME_SMOKE")=="1"
+local stage5_display=os.getenv("OSMAN_STAGE5_DISPLAY")
 local stage5_smoke_step=0
 local stage4_smoke=os.getenv("OSMAN_LOVE_STAGE4_SMOKE")=="1"
 local liquid_smoke=os.getenv("OSMAN_LOVE_LIQUID_SMOKE")=="1"
@@ -89,6 +90,20 @@ local function hud_action(id)
     begin_recipe(id:sub(8))
   end
 end
+local function smoke_tap(id)
+  local sx,sy,sw,sh=safe_area()
+  local safe={x=sx,y=sy,w=sw,h=sh}
+  for _,b in ipairs(stage_hud:layout(safe)) do
+    if b.id==id then
+      local x,y=b.x+b.w*.5,b.y+b.h*.5
+      assert(stage_hud:hit(x,y,safe)==id,"smoke control overlap: "..id)
+      love.touchpressed("stage5_ui_"..id,x,y)
+      love.touchreleased("stage5_ui_"..id,x,y)
+      return
+    end
+  end
+  error("missing smoke touch control "..id)
+end
 local debug_view=os.getenv("OSMAN_LOVE_BIOME_SMOKE")=="1"
 local function spawn()
   for radius=0,512,16 do
@@ -102,6 +117,14 @@ local function spawn()
   error("No safe player spawn found within 512 world units")
 end
 function love.load()
+  if stage5_runtime_smoke and stage5_display then
+    local vw,vh=stage5_display:match("^(%d+)x(%d+)$")
+    assert(vw and vh and tonumber(vw)>=320 and tonumber(vh)>=700,
+      "unsupported Stage5 smoke viewport")
+    assert(love.window.setMode(tonumber(vw),tonumber(vh),{resizable=false}),
+      "unable to set Stage5 portrait viewport")
+    if tonumber(vw)==320 then love.graphics.setNewFont(16) end
+  end
   w,h=love.graphics.getDimensions()
   -- Session-local v4 ID: no disk save or network host claim.
   building=Building.new(inventory,query,solid,Uuid.new(love.math.random))
@@ -204,23 +227,34 @@ function love.update(dt)
   if result then route_status=result.status end
   if stage5_runtime_smoke then
     if stage5_smoke_step==0 and inventory:count("core:wood_log")>=3 then
-      stage5_smoke_step=1;begin_recipe("core:planks_from_log")
+      stage5_smoke_step=1;smoke_tap("recipe:core:planks_from_log")
     elseif stage5_smoke_step==1 and inventory:count("core:wood_plank")>=4 then
-      stage5_smoke_step=2;begin_recipe("core:bench_from_planks")
+      stage5_smoke_step=2;smoke_tap("recipe:core:bench_from_planks")
     elseif stage5_smoke_step==2 and inventory:count("core:workbench")>=1 then
       stage5_smoke_step=3
-      hud_action("build")
-      for oy=-80,80,16 do for ox=-80,80,16 do
-        if ox~=0 or oy~=0 then
-          local x,y=player.x+ox,player.y+oy
-          if building:preview("core:workbench",x,y,0,player.x,player.y) then
-            placement_target={x=x,y=y};break
+      smoke_tap("build")
+      local sx,sy,sw,sh=safe_area()
+      local safe={x=sx,y=sy,w=sw,h=sh}
+      for oy=-80,80,16 do
+        for ox=-80,80,16 do
+          if ox~=0 or oy~=0 then
+            local x=math.floor((player.x+ox)/16+.5)*16
+            local y=math.floor((player.y+oy)/16+.5)*16
+            local px,py=camera:project(x,y,w,h)
+            if px>sx+10 and px<sx+sw-10 and py>sy+150 and py<sy+sh-390
+              and not stage_hud:hit(px,py,safe)
+              and building:preview("core:workbench",x,y,0,player.x,player.y) then
+              love.touchpressed("stage5_ground",px,py)
+              love.touchreleased("stage5_ground",px,py)
+              if placement_target and placement_target.x==x
+                and placement_target.y==y then break end
+            end
           end
         end
+        if placement_target then break end
       end
-      if placement_target then break end end
-      assert(placement_target,"Stage5 smoke no valid placement")
-      hud_action("confirm")
+      assert(placement_target,"Stage5 smoke no valid touch placement")
+      smoke_tap("confirm")
       assert(building.revision==1,"Stage5 smoke placement failed")
       stage_hud.open=true
     end
@@ -243,11 +277,20 @@ function love.draw()
   g.setColor(.05,.12,.12,.75)
   g.rectangle("fill",safe_x+8,safe_y+8,math.min(safe_w-16,600),124,12,12)
   g.setColor(1,1,1)
-  g.print("WORLD OBJECTS / seed "..query.seed,safe_x+18,safe_y+15)
-  g.print(string.format("Chunks %d/%d  Objects %d  State %s",stats.loaded,stats.needed,object_count,player.state),safe_x+18,safe_y+38)
-  g.print(string.format("Logs %d  Planks %d  Stone %d  Benches %d",
-    inventory:count("core:wood_log"),inventory:count("core:wood_plank"),
-    inventory:count("core:stone"),building.revision),safe_x+18,safe_y+61)
+  if safe_w<420 then
+    g.print("WORLD / seed "..query.seed,safe_x+18,safe_y+15)
+    g.print(string.format("Chunks %d  Objects %d",stats.loaded,object_count),
+      safe_x+18,safe_y+38)
+    g.print(string.format("Log %d  Plank %d  Bench %d",
+      inventory:count("core:wood_log"),inventory:count("core:wood_plank"),
+      building.revision),safe_x+18,safe_y+61)
+  else
+    g.print("WORLD OBJECTS / seed "..query.seed,safe_x+18,safe_y+15)
+    g.print(string.format("Chunks %d/%d  Objects %d  State %s",stats.loaded,stats.needed,object_count,player.state),safe_x+18,safe_y+38)
+    g.print(string.format("Logs %d  Planks %d  Stone %d  Benches %d",
+      inventory:count("core:wood_log"),inventory:count("core:wood_plank"),
+      inventory:count("core:stone"),building.revision),safe_x+18,safe_y+61)
+  end
   if route_status~="" then g.print(route_status,safe_x+18,safe_y+84) end
   if harvesting.active then
     g.setColor(.14,.25,.23,.85)
@@ -271,7 +314,8 @@ function love.draw()
   if stage5_runtime_smoke and building.revision==1 and frames>=30
     and stats.loaded>0 and stats.pending==0 and not screenshot_done then
     screenshot_done=true
-    love.graphics.captureScreenshot("stage5-production-touch.png")
+    love.graphics.captureScreenshot("stage5-production-touch"
+      ..(stage5_display and "-"..stage5_display or "")..".png")
     print(string.format("LOVE_STAGE5_RUNTIME_SMOKE_OK chunks=%d placed=%d logs=%d",
       stats.loaded,building.revision,inventory:count("core:wood_log")))
     io.stdout:flush()

@@ -48,6 +48,8 @@ jobs:
           luajit tests/stage5_end_to_end.lua
           lua5.4 tests/stage5_transactions.lua
           luajit tests/stage5_transactions.lua
+          lua5.4 tests/stage5_hud_layout.lua
+          luajit tests/stage5_hud_layout.lua
       - name: Real LÖVE Stage4 gameplay smoke (no regression)
         env:
           OSMAN_LOVE_STAGE4_SMOKE: "1"
@@ -75,10 +77,16 @@ jobs:
           grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK /tmp/stage5-runtime.log
           find "$HOME/.local/share/love" -name stage5-production-touch.png -exec cp {} /tmp/stage5-production-touch.png \;
           test -s /tmp/stage5-production-touch.png
+          for viewport in 320x700 360x780; do
+            OSMAN_LOVE_STAGE5_RUNTIME_SMOKE=1 OSMAN_STAGE5_DISPLAY="$viewport" timeout 120s xvfb-run -a love game/love 2>&1 | tee "/tmp/stage5-runtime-${viewport}.log"
+            grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK "/tmp/stage5-runtime-${viewport}.log"
+            find "$HOME/.local/share/love" -name "stage5-production-touch-${viewport}.png" -exec cp {} "/tmp/stage5-production-touch-${viewport}.png" \\;
+            test -s "/tmp/stage5-production-touch-${viewport}.png"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: love-stage5-production-touch
-          path: /tmp/stage5-production-touch.png
+          path: /tmp/stage5-production-touch*.png
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
