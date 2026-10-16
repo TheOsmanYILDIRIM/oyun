@@ -1,65 +1,67 @@
--- Core crystal V3: isolated visual shader; no player physics or save logic.
--- Inputs: approved base PNG + one aligned 1254x1254 mask. Mask white=active.
--- Module is not wired into production renderer before visual acceptance.
-local M = {}
-
-local SOURCE = [[
+-- Crystal pulse V3: isolated LÖVE shader, not wired into the world renderer.
+-- Exactly one approved base PNG and one aligned mask; no spritesheet/video runtime.
+local M={}
+local source=[[
 extern Image mask_tex;
-extern number clock;
+extern number time_seconds;
+extern number strength;
 extern vec2 crystal_center;
-extern vec2 crystal_radius;
-extern number intensity;
-extern vec3 glow_tint;
+extern vec2 crystal_extent;
+extern vec3 emission_color;
 
-float hash21(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-vec4 effect(vec4 tint, Image tex, vec2 uv, vec2 pixel) {
-  vec4 base = Texel(tex, uv) * tint;
-  float mask = Texel(mask_tex, uv).r;
-  float feather = smoothstep(0.035, 0.93, mask);
-  vec2 coord = (uv - crystal_center) / max(crystal_radius, vec2(0.001));
-  float radial = clamp(1.0 - length(coord), 0.0, 1.0);
-  radial = pow(radial, 0.55);
-  float n = sin(uv.x * 480.0 + clock * 2.5) *
-            sin(uv.y * 390.0 - clock * 1.8);
-  float edge = clamp(1.0 + 0.12 * n * (1.0 - feather), 0.82, 1.18);
-  float pulse = 0.58 + 0.42 * (0.5 - 0.5 * cos(clock * 6.2831853 / 2.08));
-  float strength = clamp(intensity * feather * (0.30 + 0.70 * radial) * edge * pulse, 0.0, 1.0);
-  vec3 light = clamp(glow_tint * strength, 0.0, 1.0);
-  vec3 screened = 1.0 - (1.0 - base.rgb) * (1.0 - light);
-  vec3 lifted = min(base.rgb + light * (0.38 + 0.32 * radial), vec3(1.0));
-  // Blend inside the existing base sprite alpha; preserve panel identity.
-  vec3 result = mix(screened, lifted, 0.38);
-  return vec4(result, base.a);
+vec4 effect(vec4 color, Image tex, vec2 uv, vec2 xy) {
+  vec4 base = Texel(tex,uv) * color;
+  float selection = Texel(mask_tex,uv).r;
+  // Keep metal unchanged outside mask. Edge noise is restricted to the feather.
+  float feather = smoothstep(0.02,0.98,selection);
+  vec2 rel = (uv-crystal_center) / max(crystal_extent,vec2(0.0001));
+  float radial = pow(max(0.0,1.0-length(rel)),0.55);
+  float wave = sin(uv.x*488.0+time_seconds*2.5) *
+               sin(uv.y*376.0-time_seconds*1.7);
+  float edge = clamp(1.0+0.10*wave*(1.0-feather),0.88,1.12);
+  float pulse = 0.58+0.42*(0.5-0.5*cos(time_seconds*6.28318530718/2.08));
+  float energy = clamp(strength*feather*(0.30+0.70*radial)*edge*pulse,0.0,1.0);
+  vec3 emission=clamp(emission_color*energy,0.0,1.0);
+  // Blend within the original texel (screen-dominant and modest additive).
+  // Source alpha unchanged, avoiding a separate additive draw call.
+  vec3 screen_rgb=1.0-(1.0-base.rgb)*(1.0-emission);
+  vec3 additive_rgb=min(vec3(1.0),base.rgb+emission*(0.38+0.32*radial));
+  vec3 rgb=mix(screen_rgb,additive_rgb,0.38);
+  return vec4(rgb,base.a);
 }
 ]]
 
-function M.new(base_image, mask_image)
-  assert(base_image and mask_image, "base and mask images required")
-  assert(base_image:getWidth() == mask_image:getWidth()
-    and base_image:getHeight() == mask_image:getHeight(), "crystal mask must match base dimensions")
-  local instance = {base = base_image, mask = mask_image, shader = love.graphics.newShader(SOURCE)}
-  instance.shader:send("mask_tex", mask_image)
-  -- Initial center/radii are approximations from the aligned V3 mask.
-  -- Calibrate exact geometry from the approved mask bounds before production integration.
-  instance.shader:send("crystal_center", {776.43 / 1254, 667.31 / 1254})
-  instance.shader:send("crystal_radius", {150 / 1254, 170 / 1254})
-  instance.shader:send("intensity", 1.0)
-  instance.shader:send("glow_tint", {0.55, 0.90, 1.0})
-  return instance
+local function expected_dimension(base,mask)
+  return base:getWidth()==mask:getWidth() and base:getHeight()==mask:getHeight()
 end
 
-function M.draw(instance, x, y, rotation, sx, sy, ox, oy, seconds)
-  assert(instance and instance.shader, "valid crystal effect required")
-  local g = love.graphics
+function M.new(base,mask,options)
+  assert(base and mask,"core and single mask are required")
+  assert(expected_dimension(base,mask),"core/mask dimensions must match")
+  options=options or {}
+  local shader=love.graphics.newShader(source)
+  shader:send("mask_tex",mask)
+  shader:send("strength",options.strength or 1)
+  shader:send("emission_color",options.color or {0.55,0.9,1})
+  local w,h=base:getDimensions()
+  local center=options.center_px or {776.43,667.31}
+  local extent=options.extent_px or {150,170}
+  shader:send("crystal_center",{center[1]/w,center[2]/h})
+  shader:send("crystal_extent",{extent[1]/w,extent[2]/h})
+  return {base=base,mask=mask,shader=shader}
+end
+
+function M.draw(instance,x,y,rotation,sx,sy,ox,oy,seconds)
+  assert(instance and instance.shader,"valid crystal effect required")
+  local g=love.graphics
   g.push("all")
-  -- Keep existing renderer blend state, masked shader updates the same sprite pass.
+  g.setColor(1,1,1,1)
+  g.setBlendMode("alpha","alphamultiply")
   g.setShader(instance.shader)
-  instance.shader:send("clock", seconds or 0)
-  g.draw(instance.base, x, y, rotation or 0, sx or 1, sy or sx or 1, ox or 0, oy or 0)
+  instance.shader:send("time_seconds",seconds or 0)
+  g.draw(instance.base,x,y,rotation or 0,sx or 1,sy or sx or 1,ox or 0,oy or 0)
   g.pop()
 end
 
+function M.source() return source end
 return M
