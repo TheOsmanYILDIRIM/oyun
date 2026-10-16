@@ -20,8 +20,9 @@ jobs:
           mkdir -p /tmp/love-crystal-test
           cp game/love/tests/crystal_shader_smoke.lua /tmp/love-crystal-test/main.lua
           cp -R game/love/player /tmp/love-crystal-test/player
-          xvfb-run -a -s "-screen 0 360x640x24" timeout 60s love /tmp/love-crystal-test
-          test -s /tmp/love-crystal-test/core-crystal-shader-smoke.png || test -s core-crystal-shader-smoke.png
+          SDL_AUDIODRIVER=dummy xvfb-run -a -s "-screen 0 360x640x24" timeout 60s love /tmp/love-crystal-test
+          find "$HOME/.local/share/love" -name core-crystal-shader-smoke.png -print -exec cp {} ./core-crystal-shader-smoke.png \;
+          test -s core-crystal-shader-smoke.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
