@@ -1,0 +1,11 @@
+package.path="./?.lua;./?/init.lua;"..package.path
+local E=require("player.plasma_energy_controller")
+local low=E.resolve({energy_fraction=0,ring_count=1})
+local high=E.resolve({energy_fraction=1,ring_count=3})
+assert(low.orbit_scale==.34 and low.opacity==.20)
+assert(high.orbit_scale==1 and high.opacity==1 and high.rings==3)
+local next=E.resolve({energy_fraction=0},high,.1)
+assert(next.energy>0 and next.energy<1)
+assert(not pcall(E.resolve,{energy_fraction=0/0}))
+assert(not pcall(E.resolve,{ring_count=4}))
+print("plasma energy controller OK")
