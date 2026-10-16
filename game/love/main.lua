@@ -44,6 +44,7 @@ local liquid_smoke=os.getenv("OSMAN_LOVE_LIQUID_SMOKE")=="1"
 local smoke=stage4_smoke or liquid_smoke or os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRATION_SMOKE")=="1"
 local frames=0
 local screenshot_done=false
+local stage5_world_shot=false
 local stats={loaded=0,needed=0,pending=0}
 local joystick_center
 local route_status=""
@@ -278,7 +279,7 @@ function love.draw()
   g.rectangle("fill",safe_x+8,safe_y+8,math.min(safe_w-16,600),124,12,12)
   g.setColor(1,1,1)
   if safe_w<420 then
-    g.print("WORLD / seed "..query.seed,safe_x+18,safe_y+15)
+    g.print("WORLD / "..query.seed,safe_x+18,safe_y+15)
     g.print(string.format("Chunks %d  Objects %d",stats.loaded,object_count),
       safe_x+18,safe_y+38)
     g.print(string.format("Log %d  Plank %d  Bench %d",
@@ -315,6 +316,11 @@ function love.draw()
     and stats.loaded>0 and stats.pending==0 and not screenshot_done then
     screenshot_done=true
     love.graphics.captureScreenshot("stage5-production-touch"
+      ..(stage5_display and "-"..stage5_display or "")..".png")
+    stage_hud.open=false
+  elseif stage5_runtime_smoke and screenshot_done and not stage5_world_shot then
+    stage5_world_shot=true
+    love.graphics.captureScreenshot("stage5-production-world"
       ..(stage5_display and "-"..stage5_display or "")..".png")
     print(string.format("LOVE_STAGE5_RUNTIME_SMOKE_OK chunks=%d placed=%d logs=%d",
       stats.loaded,building.revision,inventory:count("core:wood_log")))

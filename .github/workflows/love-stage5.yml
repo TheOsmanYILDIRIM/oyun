@@ -77,6 +77,10 @@ jobs:
           grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK /tmp/stage5-runtime.log
           find "$HOME/.local/share/love" -name stage5-production-touch.png -exec cp {} /tmp/stage5-production-touch.png \;
           test -s /tmp/stage5-production-touch.png
+          world_file="$(find "$HOME/.local/share/love" -name stage5-production-world.png -print -quit)"
+          test -n "$world_file"
+          cp "$world_file" /tmp/stage5-production-world.png
+          test -s /tmp/stage5-production-world.png
           for viewport in 320x700 360x780; do
             OSMAN_LOVE_STAGE5_RUNTIME_SMOKE=1 OSMAN_STAGE5_DISPLAY="$viewport" timeout 120s xvfb-run -a love game/love 2>&1 | tee "/tmp/stage5-runtime-${viewport}.log"
             grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK "/tmp/stage5-runtime-${viewport}.log"
@@ -84,11 +88,15 @@ jobs:
             test -n "$found"
             cp "$found" "/tmp/stage5-production-touch-${viewport}.png"
             test -s "/tmp/stage5-production-touch-${viewport}.png"
+            found_world="$(find "$HOME/.local/share/love" -name "stage5-production-world-${viewport}.png" -print -quit)"
+            test -n "$found_world"
+            cp "$found_world" "/tmp/stage5-production-world-${viewport}.png"
+            test -s "/tmp/stage5-production-world-${viewport}.png"
           done
       - uses: actions/upload-artifact@v4
         with:
           name: love-stage5-production-touch
-          path: /tmp/stage5-production-touch*.png
+          path: /tmp/stage5-production-*.png
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
