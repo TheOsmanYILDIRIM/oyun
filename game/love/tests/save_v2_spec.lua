@@ -116,12 +116,19 @@ local function run()
   local bad_uuid=Json.decode(Json.encode(one))
   bad_uuid.placed_instances[Fixture.placed_id].id="12345678-1234-4abc-7abc-123456789abe"
   rejected(function() Validate.check(bad_uuid,{catalog=Fixture.catalog,generator_version=1,catalog_version=1}) end)
+  -- Retrying the same damaged content address must fail, not overwrite it.
+  ok,code=store:commit(old)
+  check(not ok and fs.files[root().."current.json"]==write_baseline,
+    "partial immutable snapshot cannot be overwritten")
+  -- A different, correctly checksummed revision-2 snapshot may commit safely.
   local changed=Json.decode(Json.encode(one))
   changed.world_revision=2;changed.journal_sequence=2
   changed.player.inventory.slots[1].count=3
   ok,code=store:commit(changed)
-  check(not ok,"partial snapshot immutable path requires correct readback")
-  check(not fs.files[root().."previous.json"] or #fs.files[root().."previous.json"]>0)
+  check(ok and code=="committed","independent snapshot digest can recover "..tostring(code))
+  got,meta=store:load(uuid)
+  check(meta.status=="ok" and equals(got,changed),"roundtrip latest state")
+  check(fs.files[root().."previous.json"]==write_baseline,"previous remains last good")
   local wrong_opt=Store.new(fs,{catalog=Fixture.catalog,generator_version=2,catalog_version=1})
   got,meta=wrong_opt:load(uuid)
   check(got==nil or meta.read_only,"generator mismatch read-only")
