@@ -6,12 +6,14 @@ local Energy=require("player.plasma_energy_controller")
 local M={}
 local loaded,state,lastTime
 local mode,energyFraction=1,1
+local function finite(n) return type(n)=="number" and n==n and math.abs(n)<math.huge end
 local labels={"NORMAL","SLOW","BREATH","LEVEL UP","TWO RINGS","THREE RINGS"}
 local function clamp(x,a,b) return math.max(a,math.min(b,x)) end
 function M.setPreview(nextMode,nextEnergy)
-  if nextMode~=nil then assert(nextMode>=1 and nextMode<=6 and nextMode==math.floor(nextMode));mode=nextMode end
-  if nextEnergy~=nil then assert(type(nextEnergy)=="number" and nextEnergy==nextEnergy);energyFraction=clamp(nextEnergy,0,1) end
-  state=nil;lastTime=nil
+  if nextMode~=nil then assert(finite(nextMode) and nextMode>=1 and nextMode<=6 and nextMode==math.floor(nextMode));mode=nextMode end
+  if nextEnergy~=nil then assert(finite(nextEnergy));energyFraction=clamp(nextEnergy,0,1) end
+  -- Keep visual energy state across UI changes: otherwise shrink/restore snaps.
+  -- Changing modes does not erase the smoothing clock either.
 end
 function M.getPreview() return mode,energyFraction,labels[mode] end
 local function resources()
@@ -28,19 +30,30 @@ local function resources()
     local good,frame=pcall(love.graphics.newImage,path)
     if not good then break end
     frame:setFilter("linear","linear")
-    loaded.frames[#loaded.frames+1]=frame
+    local fw,fh=frame:getDimensions()
+    local cut=math.floor(fh*.51)
+    loaded.frames[#loaded.frames+1]={
+      image=frame,
+      back=love.graphics.newQuad(0,0,fw,cut,fw,fh),
+      front=love.graphics.newQuad(0,cut,fw,fh-cut,fw,fh),
+      fw=fw,fh=fh,cut=cut,
+    }
   end
   if #loaded.frames~=102 then loaded.core=nil;loaded.frames={} end
   return loaded
 end
-local function drawHalf(g,img,x,y,width,height,angle,back,alpha)
-  local fw,fh=img:getDimensions()
-  local cut=math.floor(fh*.51)
-  local top=back and 0 or cut
-  local section=back and cut or fh-cut
-  local q=g.newQuad(0,top,fw,section,fw,fh)
-  g.setColor(1,1,1,alpha)
-  g.draw(img,q,x,y,angle,width/fw,height/fh,fw/2,fh/2-top)
+local function drawHalf(g,frame,x,y,width,height,angle,back,alpha,tint)
+  local top=back and 0 or frame.cut
+  local q=back and frame.back or frame.front
+  g.setColor(tint[1],tint[2],tint[3],alpha)
+  g.draw(frame.image,q,x,y,angle,width/frame.fw,height/frame.fh,
+    frame.fw/2,frame.fh/2-top)
+end
+-- A diagnostic only; missing sources are never mislabeled as full plasma.
+function M.assetStatus()
+  local assets=resources()
+  return {ready=assets.core~=nil and #assets.frames==102,
+    frame_count=#assets.frames}
 end
 function M.draw(g,camera,w,h,player,context)
   local assets=resources()
@@ -78,11 +91,22 @@ function M.draw(g,camera,w,h,player,context)
         g.setColor(1,1,1,alpha)
         g.draw(assets.core,x,cy,0,scale,scale,cw/2,ch/2)
       end
-      for _,s in ipairs(specs) do
+      for index,s in ipairs(specs) do
         local n=(math.floor(t*rate*s.rate)+s.shift)%102+1
+        local tint={1,1,1}
+        if not aura.neutral then
+          local c=(index==1) and aura.primary_color or aura.secondary_color
+          -- Mild tint preserves optical artwork highlights and white-hot centre.
+          tint={.58+.42*c[1],.58+.42*c[2],.58+.42*c[3]}
+        end
         drawHalf(g,assets.frames[n],x,cy,ringWidth*s.size*breath,
-          ringHeight*s.size*breath,s.tilt,back,state.opacity*s.alpha*alpha)
+          ringHeight*s.size*breath,s.tilt,back,state.opacity*s.alpha*alpha,tint)
       end
+    end
+    if not back and not aura.neutral and aura.secondary then
+      g.setColor(aura.secondary_color[1],aura.secondary_color[2],aura.secondary_color[3],.38*state.opacity*alpha)
+      g.setLineWidth(math.max(1,z))
+      g.ellipse("line",x,cy,ringWidth*.31,ringHeight*.31)
     end
     if charge>.015 then
       g.setBlendMode("add")
