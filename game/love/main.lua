@@ -41,6 +41,7 @@ local stage5_runtime_smoke=os.getenv("OSMAN_LOVE_STAGE5_RUNTIME_SMOKE")=="1"
 -- Gated production world/FX button screenshot smoke; never persists player state.
 local plasma_runtime_smoke=os.getenv("OSMAN_LOVE_PLASMA_RUNTIME_SMOKE")=="1"
 local plasma_display=os.getenv("OSMAN_PLASMA_DISPLAY")
+local plasma_wet=os.getenv("OSMAN_PLASMA_WET")=="1"
 local plasma_smoke_step=0
 local stage5_display=os.getenv("OSMAN_STAGE5_DISPLAY")
 local stage5_smoke_step=0
@@ -143,7 +144,7 @@ function love.load()
   -- Session-local v4 ID: no disk save or network host claim.
   building=Building.new(inventory,query,solid,Uuid.new(love.math.random))
   player=spawn()
-  if liquid_smoke then
+  if liquid_smoke or (plasma_runtime_smoke and plasma_wet) then
     local found=false
     for y=-128,128,32 do
       for x=1408,1792,32 do
@@ -339,6 +340,20 @@ function love.draw()
   frames=frames+1
   if plasma_runtime_smoke and not stage5_runtime_smoke and not smoke
       and stats.loaded>0 and stats.pending==0 then
+    if plasma_wet then
+      assert(player.immersion==.5, "plasma water smoke requires real wet player")
+      if plasma_smoke_step==0 and frames>=80 then
+        g.captureScreenshot("plasma-runtime-"..(plasma_display or "default").."-wet.png")
+        plasma_smoke_step=1
+      elseif plasma_smoke_step==1 and frames>=85 then
+        local readiness=PlasmaPreview.assetStatus()
+        print(string.format(
+          "LOVE_PLASMA_WET_SMOKE_OK frames=%d immersion=%.1f full_art_ready=%s",
+          frames,player.immersion,tostring(readiness.ready)))
+        io.stdout:flush()
+        love.event.quit(0)
+      end
+    else
     local names={"normal","slow","breath","level-up",
       "two-rings","three-rings","energy80","energy60"}
     if plasma_smoke_step<8 and frames>=80+plasma_smoke_step*24 then
@@ -374,6 +389,7 @@ function love.draw()
       io.stdout:flush()
       love.event.quit(0)
     end
+    end -- dry eight-mode screenshots
   end
   if stage5_runtime_smoke and building.revision==1 and frames>=30
     and stats.loaded>0 and stats.pending==0 and not screenshot_done then
