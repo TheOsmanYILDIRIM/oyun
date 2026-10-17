@@ -1,0 +1,50 @@
+name: Core plasma full game LOVE package
+on:
+  push:
+    branches: [experiment/core-plasma-energy-runtime-20261016]
+    paths:
+      - 'game/love/**'
+      - '.github/workflows/core-plasma-full-game.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-game-love:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua and LOVE
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 luajit love xvfb zip
+      - name: Syntax and player regressions
+        working-directory: game/love
+        run: |
+          find . -type f -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+          lua5.4 tests/core_avatar.lua
+          lua5.4 tests/stage5_transactions.lua
+          lua5.4 tests/player_stage3.lua
+          lua5.4 tests/liquid_traversal.lua
+          lua5.4 tests/plasma_energy_controller.lua
+      - name: Real production LOVE screenshot smoke
+        env:
+          OSMAN_LOVE_STAGE5_RUNTIME_SMOKE: '1'
+        run: |
+          set -euo pipefail
+          timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/production.log
+          grep -q 'LOVE_STAGE5_RUNTIME_SMOKE_OK' /tmp/production.log
+          find "$HOME/.local/share/love" -name stage5-production-world.png -exec cp {} /tmp/production-world.png \;
+          test -s /tmp/production-world.png
+      - name: Build current full game
+        run: |
+          set -euo pipefail
+          cd game/love
+          zip -qr ../../oyun-core-plasma-full.love . -x '*.DS_Store'
+          cd ../..
+          unzip -t oyun-core-plasma-full.love | tail -n 2
+          test -s oyun-core-plasma-full.love
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oyun-core-plasma-full-love
+          path: |
+            oyun-core-plasma-full.love
+            /tmp/production-world.png
+          if-no-files-found: error
