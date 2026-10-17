@@ -13,6 +13,7 @@ local Uuid=require("systems.uuid")
 local StageHUD=require("core.stage5_hud")
 local PlacedRenderer=require("systems.placed_renderer")
 local ObjectRenderer=require("objects.renderer")
+local PlasmaPreview=require("player.plasma_video_visual")
 local Controller=require("player.controller")
 local Collision=require("physics.collision")
 local Joystick=require("player.joystick")
@@ -303,6 +304,18 @@ function love.draw()
   g.rectangle("fill",safe_x+safe_w-136,safe_y+safe_h-175,122,66,13,13)
   g.setColor(1,.95,.83)
   g.print("COLLECT",safe_x+safe_w-120,safe_y+safe_h-149)
+  -- Visual-only plasma preview controls; never mutate save or gameplay stats.
+  if not stage5_runtime_smoke and not smoke then
+    local _,amount,name=PlasmaPreview.getPreview()
+    local left,top=safe_x+10,safe_y+136
+    local bw=math.min(150,(safe_w-28)/2)
+    g.setColor(.04,.18,.23,.87)
+    g.rectangle("fill",left,top,bw,36,7,7)
+    g.rectangle("fill",left+bw+8,top,bw,36,7,7)
+    g.setColor(.82,.96,.99)
+    g.printf("FX "..name,left+3,top+12,bw-6,"center")
+    g.printf("ENERGY "..math.floor(amount*100+.5).."%",left+bw+11,top+12,bw-6,"center")
+  end
   stage_hud:draw(inventory,crafting,
     {x=safe_x,y=safe_y,w=safe_w,h=safe_h},placement_rotation,route_status)
   local bx,by=joystick_center()
@@ -384,8 +397,28 @@ local function interact_nearest()
   end
   if best then select_object(best) else route_status="Move closer to a resource" end
 end
+local function plasma_button(x,y)
+  if stage5_runtime_smoke or smoke then return false end
+  local sx,sy,sw= safe_area()
+  local bw=math.min(150,(sw-28)/2)
+  local by=sy+136
+  if y<by or y>by+36 then return false end
+  local mode,energy=PlasmaPreview.getPreview()
+  if x>=sx+10 and x<=sx+10+bw then
+    PlasmaPreview.setPreview(mode%6+1,nil)
+    route_status="Plasma FX preview changed"
+    return true
+  end
+  if x>=sx+18+bw and x<=sx+18+2*bw then
+    PlasmaPreview.setPreview(nil,energy<=.21 and 1 or energy-.2)
+    route_status="Plasma energy preview changed"
+    return true
+  end
+  return false
+end
 local function press(id,x,y)
   fingers[id]={x=x,y=y,origin_x=x,origin_y=y,move=false}
+  if plasma_button(x,y) then fingers[id].plasma=true;return end
   local sx,sy,sw,sh=safe_area()
   local action=stage_hud:hit(x,y,{x=sx,y=sy,w=sw,h=sh})
   if action then
@@ -412,6 +445,7 @@ local function press(id,x,y)
 end
 local function move(id,x,y)
   local p=fingers[id];if not p then return end
+  if p.plasma then return end
   if p.joystick then joystick:move(id,x,y);return end
   if p.button or p.ui then return end
   if p.multi then
@@ -428,6 +462,7 @@ local function move(id,x,y)
 end
 local function release(id,x,y)
   local p=fingers[id];if not p then return end
+  if p.plasma then fingers[id]=nil;return end
   if p.joystick then joystick:release(id)
   elseif p.ui then
     local sx,sy,sw,sh=safe_area()
@@ -471,6 +506,8 @@ function love.wheelmoved(_,dy)
   camera:zoom_at(1.15^dy,x,y,w,h)
 end
 function love.keypressed(key)
+  if key=="f" then local m=PlasmaPreview.getPreview();PlasmaPreview.setPreview(m%6+1,nil) end
+  if key=="g" then local _,e=PlasmaPreview.getPreview();PlasmaPreview.setPreview(nil,e<=.21 and 1 or e-.2) end
   if key=="r" then camera.x,camera.y=player.x,player.y;camera.zoom=1.7 end
   if key=="escape" then player:stop_navigation();selected_target=nil end
   if key=="e" then interact_nearest() end
