@@ -1,6 +1,6 @@
 # Crafting ve Blueprint Keşfi — Tasarım Defteri
 
-> 2026-10-18 | Durum: TASARIM. Keşfin **plazma deneyi + işlevsel blueprint** yönü kabul edildi; ayrıntılar aşağıda açık.
+> 2026-10-18 | Durum: TASARIM. **En güncel tarama/üretim ve Tech-Magic kararları için sondaki «Kullanılabilirlik ve Ustalık» bölümünü esas al.** Önceki eşik, malzemeyi tam tanıma ve tam Tech/Magic eşdeğerliği varsayımları tarihsel önerilerdir.
 > Repo: TheOsmanYILDIRIM/oyun | Dal: experiment/crafting-discovery-design-20261018
 > Başlangıç main: decc19e7a4d7e6eda4f33631672932c184737966
 > Beyin görevi: oyun-crafting-blueprint-discovery-design-20261018
@@ -144,3 +144,55 @@ Henüz denge formülleri, stat dağılımı, tarama R seviyesi eşikleri ve prot
 - `main` ve Stage6 bağımsız deney dalına yazma yok.
 - Kod, JSON katalog, schema, kayıt motoru, gerçek cihaz veya otomasyon uygulaması yok.
 - Kararlar sadece tasarım belgesinde ve ayrı Beyin kaydında izlenir.
+
+---
+
+## 2026-10-18 — Kullanılabilirlik ve Ustalık (güncel kullanıcı düzeltmeleri)
+
+**Bu bölüm önceki fikirlerin eksik/yanlış yorumlarını düzeltir.** Önceki R3/R4 tarama açıklamalarının bilinmeyen malzemeyi otomatik tanıdığı, basit kılıç için stat eşiklerinin katı kilit olduğu veya Tech ve Magic'in birebir aynı şey olduğu varsayılmamalıdır. Bu bölüm kabul edilen güncel yön, alt başlıkları açıkça «öneri» denilenler tasarım alternatifidir.
+
+### Onaylanan tasarım hedefleri
+
+1. **Bilgiye koşullu tarama:** Gelişmiş taramada item'da hangi malzeme kullanıldığının kimliği ancak oyuncu o malzemeyi zaten tanıyorsa çıkarılabilir. Malzeme bilinmiyorsa analiz, tarayıcının çözünürlüğüne göre **bazı davranış/stat/iz ipuçları** gösterir; bilinmeyen maddelerin tam tanımını sihirli şekilde vermez. Oyuncu yeni bilgiyi kaydedip zamanla daha iyi teşhis eder.
+2. **Sınırlı temel tasarım, çok büyük varyant uzayı:** Temel kılıcı herkes üretebilir. Ahşap, taş, demir ve özel alaşım kombinasyonları her biri için ayrı sabit tarif olmak zorunda değil. Şekil/bileşen malzemesi, üretim süreci ve kullanım koşullarına göre nitelikleri değişen çok sayıda eşya örneği bulunur. «Sonsuz kılıç» deneyimsel çeşitlilik hedefidir; gerçekten sonsuz içerik veya sonsuz güç değil.
+3. **Görsel aileleri sınırlı:** Malzemeye göre ahşap/taş/metal gibi az sayıda siluet, renk/materyal ve küçük detay varyantı kullanılabilir. İki benzer görünen kılıcın istatistikleri aynı olmak zorunda değildir.
+4. **Kolay başlayan, ustalaşması uzun süren sistem:** Mühendislik cetveliyle koşul hesaplamak zorunlu değil. Düzgün malzeme kullanınca basit bir kılıç üretmek kolay olmalı; oyuncu malzeme sinerjisi, işleme, hedef, build ve eşya kullanımını öğrenerek ustalaşmalı. LoL item build okuryazarlığı gibi: herkes eşyaya ulaşabilir, uzman iyi dizilim ve zamanlamadan ciddi avantaj üretir.
+5. **Skill + teknoloji iki sınıf/faksiyon değil:** Kullanılabilir skill kapasitesi sınırlanarak uzmanlaşma/tercih yaratılabilir. Savaş ağırlıklı skill seçen kişi gelişmiş madencilikte geri kalabilir; bunu teknolojik cihazla telafi etmek için ileri malzemelere erişmek de zor olabilir. Bu gerçek fırsat maliyeti korunmalı. Magic/skill ve teknoloji bazen aynı probleme çözümler verir, bazen farklılaşır, bazen birlikte işe yarar; birebir ikame şartı yoktur.
+
+### Tarama mantığı — önerilen iç model
+
+- Dünyada malzemenin GERÇEK kimliği ve nitelikleri sabittir.
+- Oyuncunun MaterialKnowledge kaydı bildiği madde kimliklerini, ölçüm sonuçlarını, gözlemsel kanıt ve belirsizliğini tutar.
+- Tarayıcı her analizde cihaz/skill düzeyinin çözebileceği kadarıyla eşyanın işlevini, slot/rol yapısını, proses izlerini ve bileşen malzeme özelliklerini gözlemler.
+- **Tanıma adımı:** Bilinmiş kimliğin imzası ölçümle eşleşiyorsa malzeme adı görünür. Oyuncu o kimliği öğrenmemişse «Bilinmeyen alaşım, sertlik yüksek, darbede çatlama eğilimi, oldukça yoğun» gibi kısmi ölçüm görünür. Statların tamamı tek seferde açılmaz; aralık/hata payı mümkün olabilir.
+- Daha sonra aynı bilinmeyen malzeme örneği toplanıp incelendiğinde önceki eşya taraması daha anlamlı hale gelebilir. Malzemeyi tanımak ile o malzemenin her statını eksiksiz bilmek de aynı şey değildir.
+- Tarama düzeyi yüksek olması tüm maddeleri otomatik tanıma, tüm slotları kesin kopyalama veya bütün tarifi öğrenme garantisi değildir. Önceden edinilmiş bilgi ve örnek bulunabilirliği belirleyicidir.
+- Maddelerin statları oyuncunun bilgisizliğine göre rastgele değişmez. Eksik bilgi tahminde bulunmayı gerektirir.
+
+### Aynı kılıç şemasından sayısız oynanabilir varyant — önerilen deneyim
+
+- Sword gibi bir temel blueprint, kesici gövde, kabza ve bağlantı gibi işlevsel **rolleri** tanımlar; «üç rol» doğrudan «üç birim ham madde» değildir.
+- Dört rolün her biri için her durumda sabit «tokluk >= X» şartları getirip basit crafting'i kilitleme. Fiziksel olarak anlamlı uç durumlar hariç uygunluk **dereceli** sonuç versin. Sert ama gevrek gövde keskin fakat kırılabilir; ağır gövde güçlü ama yavaş; dengeli alaşım daha pahalı ve kararlı olabilir.
+- Sadece hasar tek kalite sayısı değildir. Ağırlık, hız, darbe davranışı, keskinliğin korunması, yıpranma, tamir masrafı, oyuncunun kullandığı skill ve hedef tipi birbirini dengeleyebilir. Tek bir bileşen evrensel en iyi olmayabilir.
+- **İki katmanlı arayüz önerisi:** Normal oyuncu «Kılıç yap» der, oyun elindeki kaynaklardan «Ucuz / Dengeli / Hızlı» gibi birkaç anlaşılır kombinasyon önerir. İsteyen oyuncu «Ayrıntılı Tasarla» yolunda malzemeleri, prosesleri, ilişkileri inceleyip varyantı kaydeder. Örnek skorlar/semboller yeterli; herkesin formül ezberlemesi gerekmez.
+- Öğrenilen kombinasyon tekrar üretimde kolayca seçilir; ileride robot/mob otomasyonu aynı kayıtlı varyanta iş emri gönderebilir. Karmaşık deney ilk buluş veya geliştirme için değer taşımalı, sürekli zorunlu olmamalı.
+- Nihai stat hesapları ve işleme minioyununun rolü henüz onaylanmadı. Ustalık bilgi/tercih/kullanım becerisinden de doğabilir; rastgele kalite zarından tek başına doğmamalı.
+
+### Büyü + teknoloji + sınırlı beceriler — ekonomi tuzağı çözümlemesi
+
+- Kullanıcının önerisi: Karakter belirli miktarda skill **kullanabilir**; savaş, toplama, araştırma vb. uzmanlaşma farklı güçlü ve zayıf yanlar üretir. Bunun aktif yükleme yuvası mı kalıcı öğrenme sınırı mı olduğu **açık karardır**.
+- Büyüsel tarama skill'i ve teknolojik analiz cihazı bazı sonuçlarda örtüşebilir, ama her zaman aynı çözünürlük, enerji maliyeti veya özellik setini paylaşmak zorunda değildir. Farklı yöntemlerin özgün güçlü yanları olabilir; hiçbirinin «zorunlu sınıf» olmaması hedeflenir.
+- Savaş skill'leriyle ilerleyen karakterin zor bir madeni çıkartamaması gerçek bir handikaptır. Ancak ekipman yapmak için gerekli maden de aynı cihazın önkoşuluysa **kaynak edinme çıkmazı** olabilir.
+- Olası (henüz kabul edilmemiş) telafi yolları: düşük verimli başlangıç toplama, erken ve pahalı/ucuz farklı cihazlar, ticaret, keşif, salvage, oyuncu-oyuncu iş bölümü, gelecekte yardımcı moblar. **Bedelsiz şekilde ileri uzmanlıkla tamamen eşdeğer** kılma; zorluk anlamlı kalsın, imkânsız kilit oluşmasın.
+- Sadece Tech vs Magic arasından seçim değil; her oyuncunun savaş/toplama/tarama/üretim gibi alanlardan bir build kurması ve gerekirse cihazlarla açıklarını kapatması hedeflenir. Karma yatırımlar desteklenir.
+
+### Teknik sonuç — tasarım, henüz uygulama değil
+
+- Kanonik ItemDefinition/Blueprint aynı temel şemayı taşır; her fiziksel ItemInstance işlevsel rol → malzeme ID, proses seçimi, dayanıklılık/kondisyon ve hesaplanmış statlar gibi instance meta tutabilir.
+- Görsel sınıf, ana yapı/malzeme ailesinden türetilebilir; güç sınıfı ile birebir aynı değildir.
+- Mevcut Stage5 envanter stack modelinde eşya-örneği ve farklı koşul statı yok. Stage6 save_v2 henüz ilgili MaterialKnowledge, öğrenilmiş varyantlar ve dinamik ekipman alanlarını saklamıyor. Yeni sürüm, migration, host yetkisi, atomic transaction ve güvenli geri alma tasarlanıp ayrıca onaylanmalı.
+- Main, Stage6 deney dalı, eski kayıtlar, fizik/kamera ve Core/Axe/plazma korunacak. Bu kayıtta kod veya gerçek oyun mekanik uygulaması yapılmaz.
+
+### Bir sonraki dar kapsamlı tasarım sorusu
+
+**Skill sınırının türü nasıl olmalı?** A: Bilgi kaybolmadan yalnızca aynı anda kullanılabilen skill yuvaları; B: Öğrenilebilecek skill toplamında daha kalıcı uzmanlık sınırlaması; C: İkisinin kontrollü birleşimi. Hiçbiri henüz kabul edilmedi.
