@@ -38,6 +38,9 @@ local w,h=720,1100
 local fingers={}
 local pinch_distance=nil
 local stage5_runtime_smoke=os.getenv("OSMAN_LOVE_STAGE5_RUNTIME_SMOKE")=="1"
+-- Gated production world/FX button screenshot smoke; never persists player state.
+local plasma_runtime_smoke=os.getenv("OSMAN_LOVE_PLASMA_RUNTIME_SMOKE")=="1"
+local plasma_smoke_step=0
 local stage5_display=os.getenv("OSMAN_STAGE5_DISPLAY")
 local stage5_smoke_step=0
 local stage4_smoke=os.getenv("OSMAN_LOVE_STAGE4_SMOKE")=="1"
@@ -325,6 +328,44 @@ function love.draw()
   g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
   g.setColor(1,1,1)
   frames=frames+1
+  if plasma_runtime_smoke and not stage5_runtime_smoke and not smoke
+      and stats.loaded>0 and stats.pending==0 then
+    local names={"normal","slow","breath","level-up",
+      "two-rings","three-rings","energy80","energy60"}
+    if plasma_smoke_step<8 and frames>=80+plasma_smoke_step*24 then
+      local mode,energy=PlasmaPreview.getPreview()
+      local wantedMode=math.min(plasma_smoke_step+1,6)
+      local wantedEnergy=plasma_smoke_step<6 and 1
+        or (plasma_smoke_step==6 and .8 or .6)
+      assert(mode==wantedMode and math.abs(energy-wantedEnergy)<.0001,
+        "production plasma preview input mismatch")
+      g.captureScreenshot("plasma-runtime-"..names[plasma_smoke_step+1]..".png")
+      if plasma_smoke_step==0 then
+        -- Real touch input via production handler, not a private preview API.
+        local sx,sy=safe_area()
+        love.touchpressed("plasma_fx_smoke",sx+30,sy+145)
+        love.touchreleased("plasma_fx_smoke",sx+30,sy+145)
+      elseif plasma_smoke_step<5 then
+        love.keypressed("f")
+      elseif plasma_smoke_step==5 then
+        love.keypressed("g")
+      elseif plasma_smoke_step==6 then
+        local sx,sy,sw=safe_area()
+        local bw=math.min(150,(sw-28)/2)
+        love.touchpressed("plasma_energy_smoke",sx+24+bw,sy+145)
+        love.touchreleased("plasma_energy_smoke",sx+24+bw,sy+145)
+      end
+      plasma_smoke_step=plasma_smoke_step+1
+    elseif plasma_smoke_step==8 and frames>=286 then
+      local readiness=PlasmaPreview.assetStatus()
+      -- Do not claim video plasma is validated when source frames are missing.
+      print(string.format(
+        "LOVE_PLASMA_RUNTIME_SMOKE_OK screenshots=8 frames=%d full_art_ready=%s image_frames=%d",
+        frames,tostring(readiness.ready),readiness.frame_count))
+      io.stdout:flush()
+      love.event.quit(0)
+    end
+  end
   if stage5_runtime_smoke and building.revision==1 and frames>=30
     and stats.loaded>0 and stats.pending==0 and not screenshot_done then
     screenshot_done=true
