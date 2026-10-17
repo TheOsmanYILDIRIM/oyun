@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "source": "Osman ChatGPT conversation 2026-10-16 to 2026-10-17",
+  "source_archive_base": "art-source/core-plasma/2026-10",
+  "game_runtime_path": "game/love/assets/core_plasma",
+  "status": "inventory_only_no_binary_import_verified",
+  "items": [
+    {
+      "path": "sources/core/121222.png",
+      "bytes": 1817928,
+      "sha256": "2c63bc1645ab1718e8f612f17a8821ed4f22cd557ffd66c2e506e8d46d2dcf0b",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "sources/plasma/plasma_ribbon_master_uploaded.png",
+      "bytes": 1156963,
+      "sha256": "b4cab5c9389a43a6ce436c60cac3ae1a7e05a3f53543215286ace2e919990138",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "sources/plasma/plasma_ribbon_reference_rgba.png",
+      "bytes": 1072008,
+      "sha256": "a4c092849747802643a39875aaf8c756f207aa18f63ca0d5a8330946989a435c",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "sources/veo/121237_first_ribbon.mp4",
+      "bytes": 2096696,
+      "sha256": "e148e299b6cea8356fbbcc9587778933872c54b38aa70858ef5f4a4b5dc04782",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "sources/veo/121246_orbit.mp4",
+      "bytes": 4652631,
+      "sha256": "50b2d7a0c810206855ce5120010cf8fe10cd14661799b29ccfa7a345347a5bc6",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/cinematic_core_plasma_target.png",
+      "bytes": 2036468,
+      "sha256": "79fc1ca3e4a5b835ee0626ddf9bb1050d9ca8eefde08b4ca3e8e01a9651b7813",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/isolated_ring_reference.png",
+      "bytes": 1683867,
+      "sha256": "1e1b10d1c8ee46fcda582ec9e632f229067b534f686b176013991860dd357a58",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/veo_orbit_reference_16x9.png",
+      "bytes": 1528306,
+      "sha256": "bd14a9b579baf0504584a35e518784099679a1a3c4602c7155eb1058d8778f68",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/veo_core_horizontal_16x9.png",
+      "bytes": 354138,
+      "sha256": "63b32d496fbb9eb8ac30c2199d0c908187b15e3717ae436b4e3cdaa0f6287396",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/ribbon_veo_16x9.png",
+      "bytes": 410326,
+      "sha256": "97f84d3a202901247686443efd2e8dfc3610729ca04bd034c4d0689a15c4edcd",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/ribbon_alpha_alignment.png",
+      "bytes": 140411,
+      "sha256": "e1a6d79f3ca776f52ba8810dc1d0fef3feaba7ad76683df8a8ab6a78b7d0a0c3",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/concept_board.png",
+      "bytes": 2406129,
+      "sha256": "3b03c9ceac9d79d26ef3783a66c09d38b76f1078336e331da2cb913515bfa5d5",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/first_plasma_ribbon_9x16.png",
+      "bytes": 1698365,
+      "sha256": "aa27ab70a6d48eea37410c44cafd00195f85db6087d2e13d8ea056fa4198f700",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/optical_loop/core_plasma_optical_loop.gif",
+      "bytes": 734261,
+      "sha256": "5c69000e88810b025443123cbc4f58a6ee9bcebe7cf2fbd0c988226c0ffb616a",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/optical_loop/make_optical_loop.py",
+      "bytes": 3548,
+      "sha256": "e5bd1b91fe84e5ed3c393ba6b203e46d7b015105d02009f89e6a3cb7f9e8f783",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/optical_loop/find_plasma_loop.py",
+      "bytes": 1432,
+      "sha256": "73798a9c5cf320008234440ee837a94f0afcf5184b5b1caa635b3d4c648d4d25",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/optical_loop/optical_loop_first.png",
+      "bytes": 35707,
+      "sha256": "5fd7522ba6dcf6a52b59c4ccef68b3eda42da957d89e545370222691a947b92e",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/optical_loop/optical_loop_last.png",
+      "bytes": 35375,
+      "sha256": "c37f5a4781e5b027ac850f7da38623d0bb1a7734a34375683a01c67b1d936685",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/animations/core_plasma_levelup.gif",
+      "bytes": 2643644,
+      "sha256": "a07b9ab20877c9dcc8b83335838e36eea355c10cb0df958d9c15d364c6e0e1d9",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/animations/core_plasma_three_rings.gif",
+      "bytes": 3018401,
+      "sha256": "8ad17fe490e4906b21e8b18a65ef22775c4c100808053f15723ffdc074f39355",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/animations/core_plasma_collapse_expand.gif",
+      "bytes": 2129257,
+      "sha256": "308bf227b8add30936e8c04d919d9f8bca0dcedfcc59e0a0933283b59f0c5ca7",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/animations/core_plasma_slow.gif",
+      "bytes": 2717394,
+      "sha256": "b2d58cee4404ef53d8a65a079feb3ab8c3e8d4bf38baba0a38a16917bf0e05d2",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/animations/core_plasma_flip_return.gif",
+      "bytes": 2760810,
+      "sha256": "a161b703385ea5f6fccb894713134daa25068375706352b54f6b6a96c859e03e",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_triple.py",
+      "bytes": 3973,
+      "sha256": "0234d921f562a191197a3f933ea27608daa857d2494102a35fee2241fa67b706",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_levelup.py",
+      "bytes": 3334,
+      "sha256": "2473f6ca162a5163adde4475e386224f5c1fe92eab8a3d84b3ebb4006cdae630",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_plasma_breathe.py",
+      "bytes": 2745,
+      "sha256": "0b3b63cc4176a9c725730994f643b9a97c0f3da4422448912f99e0dd6d4631a9",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_seamless_pingpong.py",
+      "bytes": 561,
+      "sha256": "8f8a45b33a87b4bcf66e0d00cb797ce94c83cfca0ba58f21101469fba969df6a",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_preview.py",
+      "bytes": 1811,
+      "sha256": "077c76d8ee117ba7cbf25106f71a1e8ca089767ce69102d031e801ee6b9f3613",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "working/scripts/make_core_plasma.py",
+      "bytes": 3492,
+      "sha256": "32269cbbc658c0a27ef4a36d593742f38853550aa8264e40812428fb3720a5d5",
+      "github_status": "pending_binary_upload"
+    },
+    {
+      "path": "references/VEO_PROMPT.txt",
+      "bytes": 1035,
+      "sha256": "e5df1546fdb2814996ff49ef5577bca0926f6320c75a73690cf895751ae1cc46",
+      "github_status": "pending_binary_upload"
+    }
+  ]
+}
