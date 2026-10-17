@@ -30,7 +30,7 @@ jobs:
         run: |
           mkdir -p screenshots
           timeout 90s xvfb-run -a love game/love 2>&1 | tee screenshots/love.log
-          find . -name 'world-player-smoke.png' -exec cp {} screenshots/ \;
+          find "$HOME/.local/share/love" . -name 'world-player-smoke.png' -exec cp {} screenshots/ \;
           test -s screenshots/world-player-smoke.png
       - name: Package entire game/love as a playable .love
         run: |
