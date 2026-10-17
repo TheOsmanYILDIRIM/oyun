@@ -24,6 +24,9 @@ jobs:
           lua5.4 tests/player_stage3.lua
           lua5.4 tests/liquid_traversal.lua
           lua5.4 tests/plasma_energy_controller.lua
+          luajit tests/plasma_energy_controller.lua
+          lua5.4 tests/plasma_render_regression.lua
+          luajit tests/plasma_render_regression.lua
       - name: Real production LOVE screenshot smoke
         env:
           OSMAN_LOVE_STAGE5_RUNTIME_SMOKE: '1'
@@ -33,6 +36,31 @@ jobs:
           grep -q 'LOVE_STAGE5_RUNTIME_SMOKE_OK' /tmp/production.log
           find "$HOME/.local/share/love" -name stage5-production-world.png -exec cp {} /tmp/production-world.png \;
           test -s /tmp/production-world.png
+      - name: Real full-game plasma FX and ENERGY touchscreen screenshots
+        env:
+          OSMAN_LOVE_PLASMA_RUNTIME_SMOKE: '1'
+        run: |
+          set -euo pipefail
+          timeout 180s xvfb-run -a love game/love 2>&1 | tee /tmp/plasma-runtime.log
+          grep -q 'LOVE_PLASMA_RUNTIME_SMOKE_OK screenshots=8' /tmp/plasma-runtime.log
+          mkdir -p /tmp/plasma-screenshots
+          find "$HOME/.local/share/love" -name 'plasma-runtime-*.png' -exec cp {} /tmp/plasma-screenshots/ \\;
+          python3 - <<'PY'
+          import glob,hashlib,struct
+          paths=glob.glob('/tmp/plasma-screenshots/plasma-runtime-*.png')
+          assert len(paths)==8, f'expected eight real LÖVE images, got {len(paths)}'
+          signatures=set()
+          for path in paths:
+              with open(path,'rb') as f:
+                  header=f.read(24)
+              assert header[:8]==b'\\x89PNG\\r\\n\\x1a\\n'
+              w,h=struct.unpack('>II',header[16:24])
+              assert w>=320 and h>=600, (path,w,h)
+              signatures.add(hashlib.sha256(open(path,'rb').read()).hexdigest())
+              print(path,w,h)
+          assert len(signatures)>=6, 'FX label or state screenshots did not vary'
+          print('PLASMA_PNG_SMOKE_OK images=8 distinct=',len(signatures))
+          PY
       - name: Build current full game
         run: |
           set -euo pipefail
@@ -47,4 +75,5 @@ jobs:
           path: |
             oyun-core-plasma-full.love
             /tmp/production-world.png
+            /tmp/plasma-screenshots/*.png
           if-no-files-found: error
