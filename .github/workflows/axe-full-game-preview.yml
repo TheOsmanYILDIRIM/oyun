@@ -1,0 +1,47 @@
+name: Axe full-game LÖVE preview
+on:
+  push:
+    branches: [experiment/axe-harvest-runtime-20261017]
+    paths: ['.github/workflows/axe-full-game-preview.yml', 'game/love/**']
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LÖVE and Xvfb
+        run: sudo apt-get update && sudo apt-get install -y love xvfb lua5.4 zip
+      - name: Validate Lua and asset
+        run: |
+          find game/love -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+          test -s game/love/assets/axe_121227.png
+          python3 - <<'PY'
+          import struct
+          p='game/love/assets/axe_121227.png'
+          with open(p,'rb') as f: b=f.read(24)
+          assert b[:8]==bytes([137,80,78,71,13,10,26,10])
+          print('PNG',struct.unpack('>II',b[16:24]))
+          PY
+      - name: Run real main game in Xvfb and capture screenshot
+        env:
+          OSMAN_LOVE_SMOKE: '1'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          mkdir -p screenshots
+          timeout 90s xvfb-run -a love game/love 2>&1 | tee screenshots/love.log
+          find . -name 'world-player-smoke.png' -exec cp {} screenshots/ \;
+          test -s screenshots/world-player-smoke.png
+      - name: Package entire game/love as a playable .love
+        run: |
+          (cd game/love && zip -q -r ../../oyun-axe-full-game.love . -x '*.love')
+          unzip -t oyun-axe-full-game.love | tail -1
+          sha256sum oyun-axe-full-game.love | tee oyun-axe-full-game.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oyun-axe-full-game
+          path: |
+            oyun-axe-full-game.love
+            oyun-axe-full-game.sha256
+            screenshots/
+          if-no-files-found: error
