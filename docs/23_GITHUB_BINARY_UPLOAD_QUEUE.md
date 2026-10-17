@@ -54,3 +54,10 @@ select status,result from control_private.jobs where id='<job_id>'::uuid;
 - Standart `github-binary-upload` v2 adıyla aynı kuyruk yolu ikinci kez doğrulandı: HEAD `a354b1c564a98487a2cefe43b4bd6d2c0a5ab1ca`; dosya SHA aynı.
 - Test JSON dosyaları deney dalından silindi. Normal `github-control-general` v4 değiştirilmedi.
 - Tam boyutlu PNG/GIF transferi ve aktif oyun LÖVE render testi henüz bu kuyruğun kabul kanıtı değildir.
+
+## Ek negatif test ve eski endpointler
+
+- Hatalı SHA-256 staging submit işlemi `binary_hash_or_size_mismatch` ile reddedildi.
+- `main` hedefli staging isteği `binary_request_denied` ile reddedildi.
+- Önceki `github-core-plasma-binary` ve `github-binary-worker` uçları 410 (deprecated) döner; standart worker `github-binary-upload` v2'dedir.
+- Test fixture JSON dosyaları oyun deney dalından kaldırıldı; Supabase audit kayıtları tutuldu.
