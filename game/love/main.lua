@@ -40,6 +40,7 @@ local pinch_distance=nil
 local stage5_runtime_smoke=os.getenv("OSMAN_LOVE_STAGE5_RUNTIME_SMOKE")=="1"
 -- Gated production world/FX button screenshot smoke; never persists player state.
 local plasma_runtime_smoke=os.getenv("OSMAN_LOVE_PLASMA_RUNTIME_SMOKE")=="1"
+local plasma_display=os.getenv("OSMAN_PLASMA_DISPLAY")
 local plasma_smoke_step=0
 local stage5_display=os.getenv("OSMAN_STAGE5_DISPLAY")
 local stage5_smoke_step=0
@@ -122,6 +123,14 @@ local function spawn()
   error("No safe player spawn found within 512 world units")
 end
 function love.load()
+  if plasma_runtime_smoke and plasma_display then
+    local vw,vh=plasma_display:match("^(%d+)x(%d+)$")
+    assert(vw and vh and tonumber(vw)>=320 and tonumber(vh)>=700,
+      "unsupported plasma smoke viewport")
+    assert(love.window.setMode(tonumber(vw),tonumber(vh),{resizable=false}),
+      "unable to set plasma smoke viewport")
+    if tonumber(vw)==320 then love.graphics.setNewFont(16) end
+  end
   if stage5_runtime_smoke and stage5_display then
     local vw,vh=stage5_display:match("^(%d+)x(%d+)$")
     assert(vw and vh and tonumber(vw)>=320 and tonumber(vh)>=700,
@@ -339,7 +348,7 @@ function love.draw()
         or (plasma_smoke_step==6 and .8 or .6)
       assert(mode==wantedMode and math.abs(energy-wantedEnergy)<.0001,
         "production plasma preview input mismatch")
-      g.captureScreenshot("plasma-runtime-"..names[plasma_smoke_step+1]..".png")
+      g.captureScreenshot("plasma-runtime-"..(plasma_display or "default").."-"..names[plasma_smoke_step+1]..".png")
       if plasma_smoke_step==0 then
         -- Real touch input via production handler, not a private preview API.
         local sx,sy=safe_area()
