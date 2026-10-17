@@ -44,7 +44,7 @@ jobs:
           timeout 180s xvfb-run -a love game/love 2>&1 | tee /tmp/plasma-runtime.log
           grep -q 'LOVE_PLASMA_RUNTIME_SMOKE_OK screenshots=8' /tmp/plasma-runtime.log
           mkdir -p /tmp/plasma-screenshots
-          find "$HOME/.local/share/love" -name 'plasma-runtime-*.png' -exec cp {} /tmp/plasma-screenshots/ \\;
+          find "$HOME/.local/share/love" -name 'plasma-runtime-*.png' -exec cp {} /tmp/plasma-screenshots/ \;
           python3 - <<'PY'
           import glob,hashlib,struct
           paths=glob.glob('/tmp/plasma-screenshots/plasma-runtime-*.png')
@@ -53,7 +53,7 @@ jobs:
           for path in paths:
               with open(path,'rb') as f:
                   header=f.read(24)
-              assert header[:8]==b'\\x89PNG\\r\\n\\x1a\\n'
+              assert header[:8]==b'\x89PNG\r\n\x1a\n'
               w,h=struct.unpack('>II',header[16:24])
               assert w>=320 and h>=600, (path,w,h)
               signatures.add(hashlib.sha256(open(path,'rb').read()).hexdigest())
