@@ -39,7 +39,11 @@ local pinch_distance=nil
 local stage5_runtime_smoke=os.getenv("OSMAN_LOVE_STAGE5_RUNTIME_SMOKE")=="1"
 local stage5_display=os.getenv("OSMAN_STAGE5_DISPLAY")
 local stage5_smoke_step=0
-local stage4_smoke=os.getenv("OSMAN_LOVE_STAGE4_SMOKE")=="1"
+local tool_smoke_kind=os.getenv("OSMAN_LOVE_CORE_TOOL_SMOKE")
+assert(not tool_smoke_kind or tool_smoke_kind=="tree" or tool_smoke_kind=="rock",
+  "invalid core tool smoke kind")
+local tool_smoke_display=os.getenv("OSMAN_TOOL_DISPLAY")
+local stage4_smoke=os.getenv("OSMAN_LOVE_STAGE4_SMOKE")=="1" or tool_smoke_kind~=nil
 local liquid_smoke=os.getenv("OSMAN_LOVE_LIQUID_SMOKE")=="1"
 local smoke=stage4_smoke or liquid_smoke or os.getenv("OSMAN_LOVE_SMOKE")=="1" or os.getenv("OSMAN_LOVE_INTEGRATION_SMOKE")=="1"
 local frames=0
@@ -53,6 +57,7 @@ local command_number=0
 local safe_area
 local object_count=0
 local stage4_before=false
+local tool_smoke_captured={}
 local function next_command(prefix)
   command_number=command_number+1
   return prefix..":"..command_number
@@ -118,6 +123,14 @@ local function spawn()
   error("No safe player spawn found within 512 world units")
 end
 function love.load()
+  if tool_smoke_display then
+    local vw,vh=tool_smoke_display:match("^(%d+)x(%d+)$")
+    assert(vw and vh and tonumber(vw)>=320 and tonumber(vh)>=700,
+      "unsupported core tool smoke viewport")
+    assert(love.window.setMode(tonumber(vw),tonumber(vh),{resizable=false}),
+      "unable to configure tool smoke viewport")
+    if tonumber(vw)<=360 then love.graphics.setNewFont(16) end
+  end
   if stage5_runtime_smoke and stage5_display then
     local vw,vh=stage5_display:match("^(%d+)x(%d+)$")
     assert(vw and vh and tonumber(vw)>=320 and tonumber(vh)>=700,
@@ -173,6 +186,7 @@ function love.load()
     -- Exercise the real touch-button interaction callback, not direct deplete.
     local selected=false
     for _,o in ipairs(objects:objects_in({min_x=-384,min_y=-384,max_x=384,max_y=384})) do
+      if not tool_smoke_kind or o.kind==tool_smoke_kind then
       for _,direction in ipairs({{1,0},{-1,0},{0,1},{0,-1}}) do
         local x=o.x+direction[1]*(o.radius+23)
         local y=o.y+direction[2]*(o.radius+23)
@@ -188,6 +202,7 @@ function love.load()
           assert(joystick.id==nil,"joystick owner stuck after touch collection")
           if selected_target then selected=true;break end
         end
+      end
       end
       if selected then break end
     end
@@ -312,6 +327,24 @@ function love.draw()
   g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
   g.setColor(1,1,1)
   frames=frames+1
+  if tool_smoke_kind and harvesting.active then
+    -- Capture real production renderer while the actual Stage4 domain
+    -- harvest command is active; never advance or fake its state here.
+    for _,moment in ipairs({
+      {name="windup",at=.13},
+      {name="strike",at=.40},
+      {name="impact",at=.49},
+      {name="recover",at=.70}
+    }) do
+      if not tool_smoke_captured[moment.name]
+          and harvesting.active.elapsed>=moment.at then
+        love.graphics.captureScreenshot(
+          "core-tool-"..tool_smoke_kind.."-"..(tool_smoke_display or "default")
+          .."-"..moment.name..".png")
+        tool_smoke_captured[moment.name]=true
+      end
+    end
+  end
   if stage5_runtime_smoke and building.revision==1 and frames>=30
     and stats.loaded>0 and stats.pending==0 and not screenshot_done then
     screenshot_done=true
@@ -339,6 +372,16 @@ function love.draw()
     if not screenshot_done then
       screenshot_done=true
       love.graphics.captureScreenshot(liquid_smoke and "water-immersion-smoke.png" or (stage4_smoke and "world-objects-smoke.png" or (debug_view and "world-player-biome-smoke.png" or "world-player-smoke.png")))
+    end
+    if tool_smoke_kind then
+      for _,phase in ipairs({"windup","strike","impact","recover"}) do
+        assert(tool_smoke_captured[phase],"missing tool smoke phase "..phase)
+      end
+      assert((tool_smoke_kind=="tree" and inventory:count("core:wood_log")>0)
+          or (tool_smoke_kind=="rock" and inventory:count("core:stone")>0),
+          "tool smoke harvest inventory credit mismatch")
+      print("LOVE_CORE_TOOL_SMOKE_OK kind="..tool_smoke_kind..
+        " viewport="..(tool_smoke_display or "default"))
     end
     print(string.format("%s frames=%d chunks=%d objects=%d wood=%d stone=%d player=(%.1f,%.1f)",liquid_smoke and "LOVE_LIQUID_SMOKE_OK" or (stage4_smoke and "LOVE_STAGE4_SMOKE_OK" or "LOVE_INTEGRATION_SMOKE_OK"),frames,stats.loaded,object_count,inventory:count("core:wood_log"),inventory:count("core:stone"),player.x,player.y))
     io.stdout:flush()

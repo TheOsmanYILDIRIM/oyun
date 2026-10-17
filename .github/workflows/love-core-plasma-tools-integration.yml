@@ -1,0 +1,83 @@
+name: LOVE core plasma + autonomous tools integration
+on:
+  push:
+    branches: [experiment/core-plasma-tool-merge-20261017]
+    paths:
+      - 'game/love/**'
+      - '.github/workflows/love-core-plasma-tools-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LÖVE Lua and Xvfb
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 luajit love xvfb
+      - name: Validate syntax and gameplay systems in Lua 5.4 and LuaJIT
+        working-directory: game/love
+        run: |
+          set -euo pipefail
+          find . -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
+          for lua in lua5.4 luajit; do
+            for test in run runtime world_stage2 player_stage3 integration stage4_objects stage4_deep liquid_traversal core_avatar core_tool_integration stage5_systems stage5_end_to_end stage5_transactions stage5_hud_layout; do
+              "$lua" "tests/$test.lua"
+            done
+          done
+      - name: Capture active tree and rock harvest swing on production LÖVE
+        shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/core-tools
+          for kind in tree rock; do
+            for viewport in 320x700 360x780; do
+              OSMAN_LOVE_CORE_TOOL_SMOKE="$kind" OSMAN_TOOL_DISPLAY="$viewport" timeout 120s xvfb-run -a love game/love 2>&1 | tee "/tmp/core-tools/$kind-$viewport.log"
+              grep -q "LOVE_CORE_TOOL_SMOKE_OK kind=$kind viewport=$viewport" "/tmp/core-tools/$kind-$viewport.log"
+              for phase in windup strike impact recover; do
+                png="core-tool-$kind-$viewport-$phase.png"
+                found="$(find "$HOME/.local/share/love" -name "$png" -print -quit)"
+                test -n "$found"
+                cp "$found" "/tmp/core-tools/$png"
+                test -s "/tmp/core-tools/$png"
+              done
+            done
+          done
+      - name: Check screenshot dimensions and nonempty visible area
+        run: |
+          python3 - <<'PY'
+          import glob,struct
+          pics=glob.glob("/tmp/core-tools/*.png")
+          assert len(pics)==16,len(pics)
+          for path in pics:
+              data=open(path,"rb").read()
+              assert data[:8]==bytes([137,80,78,71,13,10,26,10])
+              w,h=struct.unpack(">II",data[16:24])
+              assert (w,h) in {(320,700),(360,780)},(path,w,h)
+              assert len(data)>1500,path
+          print("CORE_TOOL_16_REAL_LOVE_SCREENSHOTS_OK")
+          PY
+      - name: Real production Stage5 smoke
+        env:
+          SDL_AUDIODRIVER: dummy
+          OSMAN_LOVE_STAGE5_RUNTIME_SMOKE: '1'
+        run: |
+          set -euo pipefail
+          timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/core-tools/stage5.log
+          grep -q LOVE_STAGE5_RUNTIME_SMOKE_OK /tmp/core-tools/stage5.log
+      - name: Real production water immersion smoke
+        env:
+          SDL_AUDIODRIVER: dummy
+          OSMAN_LOVE_LIQUID_SMOKE: '1'
+        run: |
+          set -euo pipefail
+          timeout 120s xvfb-run -a love game/love 2>&1 | tee /tmp/core-tools/water.log
+          grep -q LOVE_LIQUID_SMOKE_OK /tmp/core-tools/water.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-plasma-tools-production-screenshots
+          path: /tmp/core-tools/
+          if-no-files-found: error
