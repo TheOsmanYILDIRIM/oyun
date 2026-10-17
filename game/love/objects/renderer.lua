@@ -60,7 +60,7 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   local visual={}
   if harvesting and harvesting.active then
     local source=world:get(harvesting.active.object_id)
-    if source then visual.tool=source.kind=="rock" and "pickaxe" or "axe" end
+    if source and source.kind=="rock" then visual.tool="pickaxe" end
   end
   for _,entry in ipairs(order) do
     if entry.player then player_sprite(g,camera,w,h,player,visual)
