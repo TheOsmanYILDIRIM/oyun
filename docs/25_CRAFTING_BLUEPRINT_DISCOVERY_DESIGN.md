@@ -5,6 +5,7 @@
 > Başlangıç main: decc19e7a4d7e6eda4f33631672932c184737966
 > Beyin görevi: oyun-crafting-blueprint-discovery-design-20261018
 > Bu belge kod, kayıt şeması veya mevcut oyun kuralları değildir.
+> **Güncel ortak Core/Skill/Item/Obje/Bina standardı:** [26_CORE_SKILL_CONTENT_FOUNDATION_RFC.md](26_CORE_SKILL_CONTENT_FOUNDATION_RFC.md). Skill edinme, kullanım XP'si, pahalı silme ve Core kapasitesi hakkındaki yeni kararlar bu RFC'de; önceki skill sınırı sorusu tarihsel kalmıştır.
 
 ## Kullanıcıyla üzerinde uzlaşılan yön
 
