@@ -41,6 +41,9 @@ local function render(context)
 end
 local full=render()
 assert(#full==2)
+assert(#draws==3 and draws[1].kind=="plasma"
+  and draws[2].kind=="core" and draws[3].kind=="plasma",
+  "core should be between rear and front plasma passes")
 local widthFull=full[1].sx*128
 assert(math.abs(widthFull-108)<.001)
 P.setPreview(nil,0)
@@ -71,8 +74,16 @@ assert(quadAlloc==204,"quads must not be allocated per frame")
 player.immersion=.5
 local water=render()
 assert(#water==12 and scissors==3,"water must clip 3 rings in two passes")
+assert(#draws==14 and draws[4].kind=="core" and draws[11].kind=="core",
+  "core overlap must be preserved in both water passes")
 assert(not pcall(P.setPreview,nil,math.huge))
 assert(not pcall(P.setPreview,7,nil))
 assert(not pcall(P.setPreview,nil,0/0))
 assert(player.x==0 and player.y==0 and player.immersion==.5)
+package.loaded["player.plasma_video_visual"]=nil
+love.filesystem.getInfo=function() return nil end
+local Missing=require("player.plasma_video_visual")
+local status=Missing.assetStatus()
+assert(not status.ready and status.frame_count==0,
+  "missing art must not report a full production plasma")
 print("PLASMA_RENDER_REGRESSION_OK quads="..quadAlloc.." rings=1/2/3 energy=smooth water=clipped palette=two-stat")
