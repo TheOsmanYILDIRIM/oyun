@@ -44,13 +44,15 @@ jobs:
           for viewport in 320x700 360x780; do
             OSMAN_PLASMA_DISPLAY="$viewport" timeout 180s xvfb-run -a love game/love 2>&1 | tee "/tmp/plasma-runtime-$viewport.log"
             grep -q 'LOVE_PLASMA_RUNTIME_SMOKE_OK screenshots=8' "/tmp/plasma-runtime-$viewport.log"
+            OSMAN_PLASMA_DISPLAY="$viewport" OSMAN_PLASMA_WET='1' timeout 180s xvfb-run -a love game/love 2>&1 | tee "/tmp/plasma-wet-$viewport.log"
+            grep -q 'LOVE_PLASMA_WET_SMOKE_OK' "/tmp/plasma-wet-$viewport.log"
           done
           mkdir -p /tmp/plasma-screenshots
           find "$HOME/.local/share/love" -name 'plasma-runtime-*.png' -exec cp {} /tmp/plasma-screenshots/ \;
           python3 - <<'PY'
           import glob,hashlib,struct
           paths=glob.glob('/tmp/plasma-screenshots/plasma-runtime-*.png')
-          assert len(paths)==16, f'expected sixteen real LÖVE images, got {len(paths)}'
+          assert len(paths)==18, f'expected eighteen real LÖVE images, got {len(paths)}'
           signatures=set()
           for path in paths:
               with open(path,'rb') as f:
@@ -61,8 +63,8 @@ jobs:
               assert (w,h)==(vw,vh), (path,w,h)
               signatures.add(hashlib.sha256(open(path,'rb').read()).hexdigest())
               print(path,w,h)
-          assert len(signatures)>=12, 'FX label or state screenshots did not vary'
-          print('PLASMA_PNG_SMOKE_OK images=16 distinct=',len(signatures))
+          assert len(signatures)>=14, 'FX label or state screenshots did not vary'
+          print('PLASMA_PNG_SMOKE_OK images=18 distinct=',len(signatures))
           PY
       - name: Build current full game
         run: |
