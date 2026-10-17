@@ -1,0 +1,35 @@
+name: LOVE optical plasma artwork source audit
+on:
+  push:
+    branches: [experiment/core-plasma-optical-acceptance-20261017]
+    paths:
+      - 'scripts/audit_optical_plasma_love.py'
+      - 'scripts/tests/test_audit_optical_plasma_love.py'
+      - '.github/workflows/love-optical-source-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fail-closed-source-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run negative asset and LÖVE package inspection tests
+        run: |
+          python3 -m unittest discover -s scripts/tests -p test_audit_optical_plasma_love.py -v
+          python3 -m py_compile scripts/audit_optical_plasma_love.py
+      - name: Confirm no synthetic optical visuals are accepted
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, "scripts")
+          from audit_optical_plasma_love import audit_love
+          import io, zipfile
+          x=io.BytesIO()
+          with zipfile.ZipFile(x,"w") as z:
+              z.writestr("main.lua","return true")
+          result=audit_love(x.getvalue(),"negative-fixture.love")
+          assert result["status"]=="missing_art" and not result["render_ready"]
+          print("OPTICAL_ASSETS_MISSING_DETECTED; NOT VISUAL ACCEPTANCE")
+          PY
