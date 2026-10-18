@@ -1,6 +1,6 @@
 import {BUNDLE_FORMAT,clone,validateBundle,modify,round,location,linePosition,onSegment,moveSharedVertex} from './r2-core.mjs';
 const $=id=>document.getElementById(id),cv=$('canvas'),ctx=cv.getContext('2d');
-const DB='osman-r2-authoring-drafts',STORE='drafts',HISTORY='revisions',SOURCE_ROOT=location.pathname.includes('/world-builder/')?'../data/worldbuild/':'./data/worldbuild/';
+const DB='osman-r2-authoring-drafts',STORE='drafts',HISTORY='revisions',SOURCE_ROOT=window.location.pathname.includes('/world-builder/')?'../data/worldbuild/':'./data/worldbuild/';
 const A_SHA='4d40a62c3b56733cbae5b7c78c563a626c2f01f4',RAW='https://raw.githubusercontent.com/TheOsmanYILDIRIM/oyun/'+A_SHA+'/data/worldbuild/';
 const mk=x=>JSON.stringify(x,null,2)+'\n',say=t=>{$('status').textContent=t},safeprompt=(text,def='')=>prompt(text,def);
 const iso=p=>[(p[0]-p[1])*Math.SQRT1_2,(p[0]+p[1])*Math.SQRT1_2/2],inverse=p=>[(p[0]/Math.SQRT1_2+p[1]/(Math.SQRT1_2/2))/2,(p[1]/(Math.SQRT1_2/2)-p[0]/Math.SQRT1_2)/2];

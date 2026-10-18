@@ -49,7 +49,7 @@ jobs:
         if: always()
         with:
           name: osman-r2-editor-mobile-smoke
-          path: world-builder/screenshots/r2-mobile-*.png
+          path: world-builder/screenshots/r2-*.png
           if-no-files-found: warn
       - name: Build composite Pages artifact without replacing the old preview
         run: |
