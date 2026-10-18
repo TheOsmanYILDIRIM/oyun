@@ -23,6 +23,19 @@ jobs:
             "$interpreter" tests/stage5_end_to_end.lua
             "$interpreter" tests/save_v2_spec.lua
           done
+      - name: Terrain materials determinism and existing biome regression (Lua 5.4/LuaJIT)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd game/love
+          luac5.4 -p world/materials.lua
+          luac5.4 -p world/terrain_renderer.lua
+          luac5.4 -p tests/terrain_materials.lua
+          for interpreter in lua5.4 luajit; do
+            "$interpreter" tests/terrain_materials.lua
+            "$interpreter" tests/run.lua
+            "$interpreter" tests/runtime.lua
+          done
       - name: Real LÖVE stat UI production smoke
         shell: bash
         env:
