@@ -67,7 +67,11 @@ function M:site(gx,gy)
 end
 function M:get(id)
   if type(id)~="string" then return nil end
-  return self.authored_by_id[id] or self.base:get(id)
+  if self.authored_by_id[id] then return self.authored_by_id[id] end
+  local p=self.base:get(id)
+  if not p then return nil end
+  for _,a in ipairs(self.authored) do if overlaps(p,a) then return nil end end
+  return p
 end
 function M:objects_in(bounds,include_depleted)
   -- Base validates bounds and budget, including negative coordinates.
