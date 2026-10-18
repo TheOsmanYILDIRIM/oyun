@@ -24,7 +24,9 @@ try{
   await page.locator('#fitAuthored').click();
   await page.locator('#zoomIn').click();
   await page.locator('#zoomOut').click();
+  await page.screenshot({path:resolve(root,'screenshots','r2-loaded-'+width+'.png'),fullPage:true});
   await page.locator('#files').setInputFiles({name:'corrupt.json',mimeType:'application/json',buffer:Buffer.from('{"format":"osman-worldmap-v2","seed":-1}')});
+  await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('İçe aktarma reddedildi'),null,{timeout:10000});
   assert.match(await page.locator('#status').innerText(),/İçe aktarma reddedildi/);
   assert.match(await page.locator('#stats').innerText(),/6 bölge/);
   await page.locator('#selection').selectOption('region:fisilti-giris');
