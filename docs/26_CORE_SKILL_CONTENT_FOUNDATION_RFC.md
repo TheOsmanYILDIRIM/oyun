@@ -152,3 +152,48 @@ Bu kontrol listesi gelecekteki işlerin tasarım kabul ölçütüdür; şu anda 
 Önce bir örnek dikey kesitte iki Core, birkaç skill, bir Sword blueprint, bir bilinmeyen metal, bir tarayıcı, bir maden ve bir station prototipinin oyuncu deneyimini kavramsal olarak sınayın. Sonra yalnız kullanıcının onayından sonra sürümlü tanım şeması ve test kontratları; ayrı uygulama dalı, Stage6 ile gelecekte yazılı entegrasyon.
 
 **Bu turda hiçbir kod, şema, save, build, main veya Stage6 dalına uygulama yapılmaz.** Korunacaklar: backup, Core/Axe, plazma, fizik/kamera, World/Object/Terrain Studio, stüdyolar, PNG ve bütün kullanıcı kayıtları.
+
+
+---
+
+## X. 2026-10-18 — Core statları, skill ve yükseltme: güncel kararlar
+
+> **Durum:** Kullanıcı tarafından seçilen kararlar, yalnızca önerilen mekanik ayrıntılardan ayrı tutulur. Önceki açık soru ve tarihsel RPG/meslek-skill taslaklarıyla çelişen bu bölüm güncel tasarım yönüdür; uygulanan oyun kodu, katalog ya da save şeması değildir.
+
+### Kabul edilen kararlar
+
+1. **Skill yaklaşımı:** Hazır RPG skill/feat sistemi taşınmayacak; **feat ağacı gereksiz**. Skill'lerin çoğu sadece verimi yükseltmek yerine **önceden yapılamayan eylemi açar**; kullanılan beceri XP/seviye ile ayrıca gelişir. Tüm skill listesini bugünden kararlaştırmak gerekmez. Genel bir Madencilik skill'i zorunlu değildir; örneğin belirli ore'ları tespit eden, bazılarını daha verimli çıkaran veya baltaya enerji aktararak özel darbe açan işlevsel skill'ler tasarlanabilir.
+2. **Core seviyesi ve yükseltme:** Her fiziksel Core seviyesi artırılabilir; nadir/toplanması gereken malzemeler ve **zor bir yükseltme işlemi** gerektirir. Yükselen Core seviyesi **statların üst limitini** ve **normal skill slot kapasitesini** artırır. Eşikler, tarifler ve maliyetler henüz seçilmedi.
+3. **Ortak Core gelişim sistemi:** Standart ve özel Core'lar **aynı Core Level sistemine** uyar. Aynı Core seviyesinde hem **altı temel statın ortak üst sınırı** hem de **normal skill slot sayısı** bütün Core türlerinde aynıdır. Özel Core, aynı seviyede stat tavanını veya normal slot sayısını arttırmaz; altı stat için ayrı ayrı zorunlu tavan farkları da yoktur.
+4. **Özel Core farkı:** Yeni özel Core, boss/keşif/üretim gibi yollarla elde edilebilir; **dahili özel skill/yetenek** sağlar ve bu yetenek **normal skill slotu tüketmez**. Ayrıca belirli işlerde **verimlilik avantajları** sağlayabilir. Hangi skill, etki ve bonus değerleri olduğu henüz belirlenmedi.
+5. **Core değiştirme yönü:** **B — yeni bir fiziksel Core edinip bilinç transferiyle değiştirme** seçildi. Mevcut Core'un zorunlu dönüştürülmesi tek yöntem sayılmaz. Transfer bedeli, şartları, düşük seviyeye geçiş ve anlık etkiler henüz kesinleşmedi.
+6. **Korunan önceki kararlar:** Normal skill kapasitesi sınırlı; kazanılmış normal skill'in pahalı silinmesi XP/level'ını sıfırlar; bedelsiz loadout takası yok. Boss/görev gibi özel kapasite kazanımları fikri, keşfedilmiş MaterialKnowledge, Tech/Magic ayrımı ve Definition/Instance/State/Knowledge/Visual sınırları korunur. Özel kapasite ödüllerinin ortak Core-level slot formülüne **nasıl ekleneceği henüz açık**.
+
+### Temel statlar: kabul edilmiş yön, henüz nihai isim/formül değil
+
+Kullanıcı **büyüsel-teknolojik adlandırma** yönünü seçti. Aşağıdaki altı çalışma ismi ve mekanik sınırı değerlendiriliyor; **nihai stat kataloğu, sayısal formüller veya tam stat kazanım kuralları onaylanmış sayılmaz**. Rezonans için özellikle **A — dış varlık ve bağımsız sistemlerle bağ/senkronizasyon** yaklaşımı tercih edildi.
+
+| Çalışma adı | Temel işlev | Dışarıda tutulan |
+| --- | --- | --- |
+| **Etkime** | Plazmayla mekanik etki ve kuvvet yaratma | İsabet, enerji deposunun hacmi |
+| **Hâkimiyet** | Kendi plazmasının yönünü, biçimini ve hassasiyetini kontrol | Ham kuvvet, yabancı sistemle karşılıklı bağ |
+| **Kararlılık** | Core/plazma düzenini zorlanmaya karşı koruma | Depolanan enerji miktarını doğrudan belirleme |
+| **Duyarlılık** | Çevresel sinyal/değişimleri algılama | Bilinmeyen malzemeye otomatik isim verme |
+| **Biliş** | Algılananı yorumlama, öğrenme, ilişkilendirme | Keşfedilmemiş bilgiyi yoktan bilme |
+| **Rezonans** | Canlılar, bağımsız varlıklar veya özel enerji düzenleriyle karşılıklı uyum/senkronizasyon | Genel enerji gücü, sıradan robot kumandası ve bütün büyüler |
+
+**Eylem ayrımı:** Normal balta darbesi stat/araç koşullarıyla mümkündür; enerji yüklemeli balta darbesi için ilgili **skill eylemi açar**. Ore algılama skill'i yeni sinyallere erişebilir ama bilgi kaydı yoksa ore kimliği açılmaz. Evcilleştirme/bağ kurma için ilgili skill ve canlı koşulları gerekir; yüksek Rezonans tek başına evcilleştirme değildir. Her eylem bütün statları kullanmak zorunda değildir.
+
+### Yeni içerikler için teknik yön (ÖNERİ; uygulanmış sözleşme değil)
+
+- SkillDefinition kimlik/sürüm, **açtığı capability/eylemler**, önkoşullar, tipli etkiler, enerji/malzeme/süre maliyeti ve kullanım XP ilerlemesini taşıyabilsin; PlayerSkillState edinim ve XP/level'ı saklayabilsin. Bağımsız feat/proficiency veya genel meslek skill ağacı zorunlu değil.
+- Normal skill, **Core dahili skill'i (slot maliyeti 0)** ve cihaz kaynaklı capability aynı eylem denetimine bağlanabilsin; çift aktivasyon/çift XP üretmesin.
+- Taslak denge fonksiyonları: **common_stat_cap(core_level)** altı stat ve bütün Core türleri için ortak; **normal_skill_slots(core_level)** aynı seviyedeki bütün türlerde ortak. Bunlar yalnız sınırdır; mevcut kazanılmış statları otomatik artırma değildir.
+- Bilinç transferinde kazanılmış stat/skill XP'si ve Knowledge'ın korunması, daha düşük limit durumunda etkin stat bastırma veya transfer reddi, Core dahili skill XP'sinin sahibi ve mevcut normal skill yüküyle düşük kapasiteli Core'a geçiş **ayrı kullanıcı kararı bekler**. Hiçbir ilerleme sessizce silinmeyecek veya bedelsiz skill takası varsayılmayacak.
+- Fiziksel Core instance, bilinç gelişimi, skill XP, bilinç bilgisi, özel kapasite ödülleri ve Core türü tanımları sürümlü/kimlikli kalmalı. Mevcut Stage5/Stage6 save_v2 veya üretim kataloğu bu kararla **değiştirilmez**.
+
+### Hâlâ açık kalanlar
+
+Stat adlarının nihailiği ve statların gelişme yolu; Core level / ortak tavan / slot sayısı / yükseltme maliyeti; bonus kapasite ödülleri ile ortak slot hesabı; Core transferinde XP/Knowledge, düşük Core ve dahili skill ustalık davranışı; başlangıç skill örneklerinin XP/işlev dengesi; Tech ve Magic level ilişkileri.
+
+**Kapsam koruması:** Yalnız tasarım. Main, backup, Stage6 deney dalı, Core/Axe/plazma, fizik/kamera, stüdyolar, katalog, save, kullanıcı verileri veya runtime kodu değiştirilmez.
