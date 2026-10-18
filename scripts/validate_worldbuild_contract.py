@@ -213,8 +213,9 @@ def validate_document(document):
         edges.add(edgekey)
         if not all(boundary_support(ids[rid]["polygon"], anchor, width) for rid in pair):
             fail(cid + ": missing common boundary or opening exceeds shared edge")
-        if not any(f["kind"] == connector["kind"] and
-                   any(on_segment(a, b, anchor)
+        if not any(f["kind"] == connector["kind"]
+                   and f["width"] + EPS >= width
+                   and any(on_segment(a, b, anchor)
                        for a, b in zip(f["points"], f["points"][1:]))
                    for f in document["features"]):
             fail(cid + ": no matching line center crossing its anchor")

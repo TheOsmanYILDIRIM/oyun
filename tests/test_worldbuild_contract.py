@@ -36,7 +36,7 @@ class WorldbuildContract(unittest.TestCase):
         self.assertEqual(resolve_region(self.pilot, 100, 128), "region:fisilti-giris")
         self.assertEqual(resolve_region(self.pilot, 400, 128), "region:fisilti-koruluk")
         self.assertEqual(resolve_region(self.pilot, 650, 128), "region:fisilti-dere")
-        self.assertIsNone(resolve_region(self.pilot, -0.1, 128))
+        self.assertIsNone(resolve_region(self.pilot, -200, 128))
         self.assertIsNone(resolve_region(self.pilot, 800, 128))
 
     def test_order_invariance_and_seed_identity(self):
@@ -89,6 +89,7 @@ class WorldbuildContract(unittest.TestCase):
         self.mutate_fails(lambda d: d.update(save_version=2))
         self.mutate_fails(lambda d: d["features"].append(copy.deepcopy(d["features"][0])))
         self.mutate_fails(lambda d: d["features"][0].update(intent_only=False))
+        self.mutate_fails(lambda d: d["features"][0].update(width=1))
         self.mutate_fails(lambda d: d["features"][0].update(points=[[64,128],[1500,128]]))
         self.mutate_fails(lambda d: d["features"][0].update(points=[[64,128],[64,128]]))
         self.mutate_fails(lambda d: d["features"][1].update(points=[[536,56],[800,62]]))
