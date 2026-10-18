@@ -83,7 +83,6 @@ local craft=Crafting.new(bag)
 assert(craft:execute("r2-planks-1","core:planks_from_log",{}).ok)
 assert(bag:count("core:wood_plank")==4 and bag:count("core:wood_log")==2)
 assert(a:is_depleted(tree.id))
-assert(not a:objects_in(near)[1] or true)
 assert(not pcall(function() a:export_delta() end),"unsaved renewal must fail closed")
 a:advance_day(2)
 assert(a:is_depleted(tree.id))
@@ -110,4 +109,55 @@ assert(not pcall(function() Population.new(q,water,{map_id=cfg.map_id,
  sites=sites,region_at=region,starter_resources=true,
  anchors={{id="starter-tree",region_id="region:fisilti-giris",x=70,y=220,def_id="core:oak_tree"}}}) end),
  "duplicate curated resource ID accepted")
+
+-- Real Generator v1 + authored-facade smoke, separate from the synthetic
+-- guaranteed-start fixture. This is NOT production v2 map activation.
+local WorldQuery=require("world.world_query")
+local Facade=require("world.authored_world")
+local WaterAdapter=require("world.collision_adapter")
+local realbase=WorldQuery.new(seed)
+local entry={
+ id="region:fisilti-giris",biome="meadow",variant="wildflower",
+ polygon={{0,0},{132,-24},{246,0},{265,76},{256,110},{256,146},
+  {267,184},{256,256},{165,268},{58,254},{-24,160}}
+}
+local authored=Facade.new({
+ format="osman-worldbuild-v1",schema_version=1,generator_version=1,
+ seed=seed,map_id=cfg.map_id,coordinate_space="world",
+ projection="iso-45",regions={entry}
+},realbase)
+local waterreal=WaterAdapter.new(authored,8)
+local function actual_region(x,y)
+ local hit=authored.authored:region_at(x,y)
+ return hit and hit.id or nil
+end
+local realcfg={map_id=cfg.map_id,region_at=actual_region,
+ sites={{id="site:fisilti-uyanis",role="spawn",region_id=entry.id,anchor={64,128}}},
+ corridors={{width=18,points={{64,128},{256,128}}}}}
+local real=Population.new(authored,waterreal,realcfg)
+local twins=Population.new(authored,waterreal,realcfg)
+local big={min_x=-256,min_y=-256,max_x=512,max_y=512}
+local whole=real:objects_in(big)
+local idset={}
+for _,o in ipairs(whole) do
+ assert(not idset[o.id]);idset[o.id]=o
+ assert(twins:get(o.id)~=nil and twins:get(o.id).x==o.x)
+ assert(o.id:match("^worldobj:v1:"))
+end
+local seam_seen={}
+for _,bounds in ipairs({
+ {min_x=-256,min_y=-256,max_x=128,max_y=512},
+ {min_x=128,min_y=-256,max_x=512,max_y=512}
+}) do
+ for _,o in ipairs(real:objects_in(bounds)) do
+  assert(idset[o.id],"chunk seam generated a foreign resource")
+  seam_seen[o.id]=true
+ end
+end
+for id in pairs(idset) do assert(seam_seen[id],"chunk seam omitted a resource") end
+assert(authored:sample(-600,-600).biome==realbase:sample(-600,-600).biome)
+assert(not pcall(function()
+ Population.new(WorldQuery.new(seed+1),waterreal,realcfg)
+end),"incorrect generator seed accepted")
+print("R2_POPULATION_REAL_QUERY_OK authored facade, v1 seed, chunk union, water adapter")
 print("R2_POPULATION_OK deterministic IDs, clear corridors, build, rare guard, renew, Stage5 craft, Stage6 guard")
