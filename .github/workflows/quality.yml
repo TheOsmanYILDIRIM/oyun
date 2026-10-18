@@ -23,6 +23,16 @@ jobs:
             "$interpreter" tests/stage5_end_to_end.lua
             "$interpreter" tests/save_v2_spec.lua
           done
+      - name: Worldbuild C authored query and mesh parity (Lua 5.4 and LuaJIT)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd game/love
+          for interpreter in lua5.4 luajit; do
+            "$interpreter" tests/worldbuild_authored.lua
+            "$interpreter" tests/worldbuild_facade.lua
+            "$interpreter" tests/world_stage2.lua
+          done
       - name: Real LÖVE stat UI production smoke
         shell: bash
         env:
