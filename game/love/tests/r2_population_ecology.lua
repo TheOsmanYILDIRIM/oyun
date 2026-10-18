@@ -55,6 +55,14 @@ assert(a:can_build(150,210,5))
 assert(not a:can_build(64,128,5))
 assert(not a:can_build(384,128,5))
 assert(not a:can_build(1000,1000,5))
+local rare=Population.rare_slots({
+ {id="site:fisilti-kalinti",role="ruin",region_id="region:fisilti-kalinti",anchor={320,420}},
+ {id="site:fisilti-kayalik-cikis",role="pass",region_id="region:fisilti-kayalik-gecit",anchor={1130,350}},
+ sites[1]
+})
+assert(#rare==2 and rare[1].id~=rare[2].id)
+assert(rare[1].id:match("^rare%-slot:") and rare[2].id:match("^rare%-slot:"))
+assert(rare[1].id~=rare[1].site_id) -- site ID is never a loot/object ID
 assert(not a:rare_status("core:rare_crystal"))
 assert(not a:rare_status("core:stone_rock"))
 -- Outside authored region, procedural identity and placement stay Generator v1.
@@ -83,6 +91,7 @@ local craft=Crafting.new(bag)
 assert(craft:execute("r2-planks-1","core:planks_from_log",{}).ok)
 assert(bag:count("core:wood_plank")==4 and bag:count("core:wood_log")==2)
 assert(a:is_depleted(tree.id))
+assert(a.tree_regrow_days==3)
 assert(not pcall(function() a:export_delta() end),"unsaved renewal must fail closed")
 a:advance_day(2)
 assert(a:is_depleted(tree.id))

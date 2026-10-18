@@ -103,7 +103,9 @@ function M.new(query,water,config)
  assert(type(config.sites)=="table" and #config.sites>=1,"R2 sites required")
  local self=setmetatable({query=query,water=water,region_at=config.region_at,
   sites=config.sites,corridors=config.corridors or {},build_zones=config.build_zones or {},
-  day=0,renewal={},persistence_supported=false},M)
+  day=0,renewal={},tree_regrow_days=config.tree_regrow_days or 3,persistence_supported=false},M)
+ assert(type(self.tree_regrow_days)=="number" and self.tree_regrow_days==math.floor(self.tree_regrow_days)
+  and self.tree_regrow_days>=1 and self.tree_regrow_days<=365,"invalid renewable duration")
  local seen,spawn={},nil
  for _,s in ipairs(self.sites) do
   assert(site_valid(s) and not seen[s.id],"invalid or duplicate R2 site")
@@ -166,7 +168,7 @@ function M:get(id)
 end
 function M:is_depleted(id)
  local record=self.renewal[id]
- if record then return self.day-record.depleted_day<3 end
+ if record then return self.day-record.depleted_day<self.tree_regrow_days end
  return self.base:is_depleted(id)
 end
 function M:deplete(id)
@@ -180,7 +182,7 @@ function M:deplete(id)
  end
  local ok,reason=self.base:deplete(id)
  if not ok then return ok,reason end
- -- Trees only, in authored areas, regrow after 3 explicit gameplay days.
+ -- Trees only, in authored areas, regrow after configured explicit gameplay days.
  -- Rocks and unspecified future rare definitions remain finite.
  if o.def_id=="core:oak_tree" and self.region_at(o.x,o.y) then
   self.renewal[id]={depleted_day=self.day}
@@ -225,6 +227,23 @@ function M:can_build(x,y,r)
   if dist2(x,y,o.x,o.y)<(r+o.radius+4)^2 then return false,"occupied" end
  end
  return true
+end
+-- Pure authoring reservations for scarce discovery nodes; NOT loot or worldobj IDs.
+-- R2 ruin, pass and vantage anchors are opportunities, never auto-spawned resources.
+function M.rare_slots(sites)
+ assert(type(sites)=="table","rare slots need validated sites")
+ local slots,seen={},{}
+ local roles={ruin=true,pass=true,vista=true}
+ for _,s in ipairs(sites) do
+  assert(site_valid(s) and not seen[s.id],"invalid rare POI")
+  seen[s.id]=true
+  if roles[s.role] then
+   slots[#slots+1]={id="rare-slot:"..s.id:sub(6),site_id=s.id,
+    region_id=s.region_id,anchor={s.anchor[1],s.anchor[2]},policy="finite"}
+  end
+ end
+ table.sort(slots,function(a,b) return a.id<b.id end)
+ return slots
 end
 function M:rare_status(def_id)
  -- A future rare resource requires a canonical catalog definition and explicit
