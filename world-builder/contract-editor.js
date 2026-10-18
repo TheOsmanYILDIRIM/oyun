@@ -23,12 +23,12 @@ function validate(m){
   const p=r.polygon;for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++){if(Math.hypot(p[i][0]-p[j][0],p[i][1]-p[j][1])<1e-7)throw Error('Yinelenen köşe');if((j!==i+1)&&!(i===0&&j===p.length-1)&&intersects(p[i],p[(i+1)%p.length],p[j],p[(j+1)%p.length]))throw Error('Kendiyle kesişen bölge')}
   ids.add(r.id);regions.set(r.id,r);
  }
- for(let i=0;i<m.regions.length;i++)for(let j=i+1;j<m.regions.length;j++){const a=m.regions[i].polygon,b=m.regions[j].polygon;if(a.some(p=>inside(p,b)&&!boundary(p,b))||b.some(p=>inside(p,a)&&!boundary(p,a))||a.some((p,k)=>b.some((q,j)=>intersects(p,a[(k+1)%a.length],q,b[(j+1)%b.length])))throw Error('Bölgeler örtüşüyor')}
+ for(let i=0;i<m.regions.length;i++){for(let j=i+1;j<m.regions.length;j++){const a=m.regions[i].polygon,b=m.regions[j].polygon;const vertexOverlap=a.some(p=>inside(p,b)&&!boundary(p,b))||b.some(p=>inside(p,a)&&!boundary(p,a));const crossing=a.some((p,k)=>b.some((q,j)=>intersects(p,a[(k+1)%a.length],q,b[(j+1)%b.length])));if(vertexOverlap||crossing)throw Error('Bölgeler örtüşüyor')}}
  for(const c of m.connectors){if(!validId(c.id,'connector')||ids.has(c.id)||!Array.isArray(c.regions)||c.regions.length!==2||c.regions[0]>=c.regions[1]||!regions.has(c.regions[0])||!regions.has(c.regions[1])||!finite(c.anchor)||!['path','water'].includes(c.kind)||!(c.width>0&&c.width<=64))throw Error('Connector geçersiz: '+c.id);
   for(const id of c.regions){const p=regions.get(id).polygon;if(!p.some((a,i)=>{const b=p[(i+1)%p.length],len=Math.hypot(b[0]-a[0],b[1]-a[1]),u=((c.anchor[0]-a[0])*(b[0]-a[0])+(c.anchor[1]-a[1])*(b[1]-a[1]))/(len*len);return len>=c.width&&u>=c.width/(2*len)-1e-6&&u<=1-c.width/(2*len)+1e-6&&boundary(c.anchor,[a,b,b])}))throw Error('Bağlantı iki sınırda yeterli genişlikte değil: '+c.id)}ids.add(c.id);
  }
  for(const f of m.features){if(!validId(f.id,'feature')||ids.has(f.id)||f.intent_only!==true||!['path','water'].includes(f.kind)||!(f.width>0&&f.width<=64)||!Array.isArray(f.points)||f.points.length<2||f.points.length>96||!f.points.every(finite))throw Error('Feature geçersiz: '+f.id);ids.add(f.id);for(let i=0;i<f.points.length;i++){const a=f.points[i],b=f.points[i+1]||a;for(let k=0;k<=20;k++){const t=k/20,p=[a[0]*(1-t)+b[0]*t,a[1]*(1-t)+b[1]*t];if(!m.regions.some(r=>inside(p,r.polygon)))throw Error('Feature bölge dışında: '+f.id)}}}
- for(const c of m.connectors){if(!m.features.some(f=>f.kind===c.kind&&f.width>=c.width&&f.points.some((p,i)=>i>0&&boundary(c.anchor,[f.points[i-1],p,p]))))throw Error('Bağlantının üzerinden geçen uygun feature yok: '+c.id)}
+ for(const c of m.connectors){const matching=m.features.some(f=>f.kind===c.kind&&f.width>=c.width&&f.points.some((p,i)=>i>0&&boundary(c.anchor,[f.points[i-1],p,p])));if(!matching)throw Error('Bağlantının üzerinden geçen uygun feature yok: '+c.id)}
  return true;
 }
 const say=s=>{$('status').textContent=s};
