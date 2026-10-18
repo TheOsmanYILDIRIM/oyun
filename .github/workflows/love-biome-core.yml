@@ -1,7 +1,7 @@
 name: LOVE biome core validation
 on:
   push:
-    branches: [main, experiment/world-2d-design-20261012]
+    branches: [main, experiment/world-2d-design-20261012, experiment/worldbuild-r2-topography-20261018]
     paths:
       - 'game/love/**'
       - 'docs/13_LOVE_2D_RUNTIME_STAGE1.md'
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua 5.4
-        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 love xvfb
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4 luajit love xvfb
       - name: Syntax check all Lua modules
         run: find game/love -name '*.lua' -print0 | xargs -0 -n1 luac5.4 -p
       - name: Execute biome unit tests
@@ -24,6 +24,16 @@ jobs:
       - name: Execute input and camera unit tests
         working-directory: game/love
         run: lua5.4 tests/runtime.lua
+      - name: R2 topography height movement and chunk regression (Lua 5.4 and LuaJIT)
+        working-directory: game/love
+        shell: bash
+        run: |
+          set -euo pipefail
+          luac5.4 -p world/topography_surface.lua
+          luac5.4 -p tests/r2_topography_surface.lua
+          for interpreter in lua5.4 luajit; do
+            "$interpreter" tests/r2_topography_surface.lua
+          done
       - name: Smoke-test actual LOVE render loop
         shell: bash
         run: |
