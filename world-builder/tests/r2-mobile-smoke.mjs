@@ -10,9 +10,12 @@ try{
  for(const [width,height] of [[320,700],[360,780],[411,890]]){
   const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   const page=await context.newPage(),errors=[];
-  page.on('pageerror',e=>errors.push(e.message));
+  page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+  page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
+  page.on('requestfailed',req=>errors.push('request: '+req.url()+' '+req.failure()?.errorText));
   await page.goto('http://127.0.0.1:8876/world-builder/r2.html',{waitUntil:'networkidle',timeout:45000});
-  await page.waitForFunction(()=>document.querySelector('#stats')?.textContent.includes('6 bölge'),{timeout:30000});
+  try{await page.waitForFunction(()=>document.querySelector('#stats')?.textContent.includes('6 bölge'),null,{timeout:12000})}
+  catch(e){await page.screenshot({path:resolve(root,'screenshots','r2-failed-'+width+'.png'),fullPage:true});const summary=await page.evaluate(()=>({load:document.querySelector('#loadStatus')?.textContent,status:document.querySelector('#status')?.textContent,stats:document.querySelector('#stats')?.textContent,html:document.body?.innerText.slice(0,450)}));throw Error('MOBILE_INIT_FAILED '+JSON.stringify({summary,errors,cause:e.message}))}
   assert.match(await page.locator('#loadStatus').innerText(),/A teslimi|Yerel R2 taslağı/);
   assert.equal(await page.locator('[data-layer="sites"]').isChecked(),true);
   await page.locator('[data-layer="sites"]').uncheck();
