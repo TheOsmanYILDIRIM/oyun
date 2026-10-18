@@ -1,17 +1,22 @@
 # WORLDBUILD R2 — branch-local agent B report
 
-- **Agent:** B / elevation and hybrid 2.5D topography
-- **State:** implementing, awaiting real GitHub Actions CI and verification
-- **Approved decisions:** Gentle slopes freely traversable; moderate slopes affect directional speed; steep cliffs block; explicit stable ramp/step corridors permit controlled crossings; pure-Lua line of sight, build footprint checks, conservative collider candidates.
-- **Base SHA:** 4d40a62c3b56733cbae5b7c78c563a626c2f01f4 (A confirmed)
+- **Agent:** B / elevation, slopes and hybrid 2.5D topography (Round 2 / Wave 2)
+- **State:** **done** for isolated optional API + existing-CI verification; **not** merged into main or activated in production.
+- **Approved decisions:** Gentle slopes are traversable; moderate inclines apply directional speed penalties; cliffs obstruct passage; explicit authored ramp / step corridors allow controlled passage; terrain height informs sight lines, buildability, and collision candidates. Qualitative decisions approved by user. Numeric defaults below are adjustable V1 parameters, not fixed game-balance canon.
+- **Base SHA:** A branch 4d40a62c3b56733cbae5b7c78c563a626c2f01f4; preserved as direct parent of implementation.
 - **Branch:** experiment/worldbuild-r2-topography-20261018
-- **Touched files:** game/love/world/topography_surface.lua; game/love/tests/r2_topography_surface.lua; .github/workflows/love-biome-core.yml; docs/WORLDBUILD_R2_AGENT_REPORT.md
-- **Implementation:** optional topography module; no automatic production activation. Height source must be explicit and deterministic; no edits to Generator v1, WorldQuery, field.lua, renderer, main.lua, Stage5/6, core or save.
-- **Tests:** target Lua 5.4 and LuaJIT in existing LOVE biome workflow, which also runs the existing real LÖVE/Xvfb production smoke. R2 topography is *not* visually wired into that smoke.
-- **Passed:** local Lua syntax/logic smoke in TeXLua with a temporary field stub; not equivalent to CI testing real Generator v1.
-- **Failed:** none currently observed.
-- **Unverified:** CI run/job/step, actual topography scene/render, player collider runtime integration, real Android device/performance.
-- **Dependencies:** coordinate/height sampler and authored ramp/step mapping owned by the R2 coordinator/runtime integrator; the builder and other agents' files stay untouched.
-- **Blockers:** pending CI.
-- **Next action:** verify final branch commit and exact Actions job steps; update this report, then complete canonical Beyin task via official beyin-io.
-- **Beyin:** oyun-worldbuild-r2-topography-20261019 revision 1 active, created through beyin-io request oyun_r2_topography_create_20261019_b01 and verified in agy-vault/main.
+- **Implementation commit:** 53106c0ef1d34ee9562a030ad0ee741e96ae586d. Final reporting commit intentionally not self-referenced; read live branch HEAD.
+- **Touched files (only B-owned):** game/love/world/topography_surface.lua; game/love/tests/r2_topography_surface.lua; .github/workflows/love-biome-core.yml; docs/WORLDBUILD_R2_AGENT_REPORT.md.
+- **API:** Topography.new({world=query}) or deterministic height_at(x,y) adapter; height; sample (height, x/y gradient, grade, slope class); transition (continuous-segment slope test, walkability, directional speed factor, blocked point); line_of_sight (height occlusion); can_build (grid-sampled slope/height variation); colliders (conservative global 8-unit rectangular candidates). Authored stable-ID, rectangular, nonoverlapping ramp/steps zones are explicit and opt-in. Geometry inputs are world units independent of chunk order.
+- **Adjustable numeric defaults:** gentle grade <=0.10, moderate walk grade <=0.45, ramp <=1.50, single sampled step rise <=1.5 world units; on moderate uphill maximum 35% slowdown, downhill maximum 10%; ramp factor 0.55, stairs 0.65; build max grade 0.12 and sampled elevation variation 0.8. These are preliminary tunables, not user-approved global physics standards.
+- **Determinism:** pure-Lua, no RNG or time dependency; world.field Generator v1 seeded field is read without editing. Real Generator v1 samples at negative/global coordinates, independent field instances at -256/0/256/512 chunk seams, reverse traversal, stable collider ordering, invalid bounds/budgets and ramp/step exceptions tested. This is finite-resolution sampling, not a proof of arbitrary sub-sample hazards.
+- **CI PASS (implementation SHA 53106c0e):** [LOVE biome core validation run #39167270921](https://github.com/TheOsmanYILDIRIM/oyun/actions/runs/39167270921), job biome-tests **117792721022**, completed success. Step **R2 topography height movement and chunk regression (Lua 5.4 and LuaJIT)** success; preceding syntax, biome/camera and final real LÖVE/Xvfb smoke steps success.
+- **CI PASS (implementation SHA 53106c0e):** [quality run #39167270942](https://github.com/TheOsmanYILDIRIM/oyun/actions/runs/39167270942), job test **117792721108**, completed success; Python schema/validator, Lua 5.4/LuaJIT Stage5/Stage6, biome/materials/worldbuild regressions, stat UI and production Stage5/6 LÖVE/Xvfb smoke steps all success.
+- **Local check:** TeXLua pure-Lua tests with a temporary nonproduction Field stub PASS; this is *not* an official Generator v1 validation. Actual source and both targeted interpreters were executed in the verified GitHub Actions job.
+- **Failed:** none in implemented B API or verified CI scope.
+- **Unverified/outside scope:** live terrain height mesh/iso projection and raised character rendering, real topography gameplay collision/pathfinding/build transactions, editor zone mapping and authored height geometry, cliff sub-sampling edge cases, renderer/collider cross-validation, real Android FPS/device, actual new-topography scene screenshot. Existing LÖVE smoke tests exercise the original production scene, **not** a topography-activated render.
+- **Protection:** main, WorldQuery, field.lua, terrain_renderer.lua, main.lua, Generator v1 seed/IDs, Stage5/6, save data, Core/plasma, other agents' paths, backups, user data untouched.
+- **Dependencies:** Coordinator/runtime owner must integrate height data and optional API into WorldQuery/renderer/collision/player/build, map authored ramp/steps to stable world regions/connectors, and test all consumer parity. E/F/B-builder data are read-only context; no blind merges.
+- **Blockers:** none for this B-owned isolated API. Runtime activation requires separate integration and visual/physics parity proof by coordinator.
+- **Next action:** coordinator reads final B branch HEAD, this report, source/CI checks, then merges/adapts only compatible B changes after cross-agent integration tests. Do not automatically activate height physics or merge main.
+- **Beyin:** agy-vault/main/tasks/oyun-worldbuild-r2-topography-20261019.md, **revision 2 / status done**, read back after official beyin-io request oyun_r2_topography_done_20261019_b01 (run #39167392525, status applied; main task checked). Initial task-create request oyun_r2_topography_create_20261019_b01, status applied.
