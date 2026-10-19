@@ -48,4 +48,5 @@
 
 ## Avenox Beyin
 - Canonical `agy-vault/main/tasks/oyun-worldbuild-r2-compat-20261019.md`.
-- Official task creation `oyun_r2_compat_create_20261019_h01` was `applied`, canonical task independently read at revision 1/active. Subsequent status updates must be separately verified on `main`.
+- **Beyin task ID:** `oyun-worldbuild-r2-compat-20261019`; **revision 2 / status blocked**, official v2 request `oyun_r2_compat_blocked_20261019_h02`, run [#39238109713](https://github.com/TheOsmanYILDIRIM/agy-vault/actions/runs/39238109713) `applied` and independently reread from `agy-vault/main` (crossing geography decision pending). Creation request `oyun_r2_compat_create_20261019_h01` was independently verified (revision 1 / active).
+- **Verified official receipt:** event `oyun-worldbuild-r2-compat-ci39237173365`, request `oyun_r2_compat_receipt_20261019_h03`, [run #39238220851](https://github.com/TheOsmanYILDIRIM/agy-vault/actions/runs/39238220851) `applied` and independently read at `agy-vault/main/receipts/ff4bd20cb5615e0e0be4fb4b14bf34d840cc6624dfa4075f08f931fdefe1320f.md`. Receipt confirms *partial tested integration*, not full H completion.
