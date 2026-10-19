@@ -64,7 +64,15 @@ class WorldMapRound2(unittest.TestCase):
             r2_feature = source_features[feature["id"]]
             self.assertEqual((r2_feature["kind"], r2_feature["width"], r2_feature["intent_only"]),
                              (feature["kind"], feature["width"], feature["intent_only"]))
-            self.assertEqual(r2_feature["points"][:len(feature["points"])], feature["points"])
+            if feature["id"] == "feature:fisilti-dere-izi":
+                # H explicitly approved river rerouting; the original pilot file
+                # stays immutable while the v2 child source crosses (704,128).
+                self.assertEqual(r2_feature["points"][:2], feature["points"][:2])
+                self.assertEqual(r2_feature["points"][-1], feature["points"][-1])
+                self.assertEqual(r2_feature["points"][2], [704, 128])
+                self.assertEqual(len(r2_feature["points"]), len(feature["points"]) + 1)
+            else:
+                self.assertEqual(r2_feature["points"][:len(feature["points"])], feature["points"])
         self.assertEqual(len(self.source["regions"])-len(self.pilot["regions"]), 3)
 
     def test_global_fallback_and_boundary_tiebreak(self):
