@@ -1,7 +1,7 @@
 name: LOVE world-player integration
 on:
   push:
-    branches: [main, experiment/world-player-integration-v1]
+    branches: [main, experiment/world-player-integration-v1, experiment/worldbuild-r2-visual-20261018]
   workflow_dispatch:
 jobs:
   integration:
@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua and LOVE
-        run: sudo apt-get update && sudo apt-get install -y lua5.4 love xvfb
+        run: sudo apt-get update && sudo apt-get install -y lua5.4 luajit love xvfb
       - name: Lua tests
         working-directory: game/love
         run: |
@@ -18,6 +18,21 @@ jobs:
           lua5.4 tests/world_stage2.lua
           lua5.4 tests/player_stage3.lua
           lua5.4 tests/integration.lua
+      - name: R2 D seam, 18 materials, quality and height tests (Lua 5.4 + LuaJIT)
+        if: github.ref_name == 'experiment/worldbuild-r2-visual-20261018'
+        working-directory: game/love
+        run: |
+          lua5.4 tests/terrain_materials.lua
+          luajit tests/terrain_materials.lua
+          lua5.4 tests/r2_visual_terrain.lua
+          luajit tests/r2_visual_terrain.lua
+      - name: R2 D verified B topography source
+        if: github.ref_name == 'experiment/worldbuild-r2-visual-20261018'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 63b2baafffbd8f03842f1e44fcf6b169d1edff58
+          git show 63b2baafffbd8f03842f1e44fcf6b169d1edff58:game/love/world/topography_surface.lua > /tmp/r2_visual_topography_surface.lua
+          test "$(git hash-object /tmp/r2_visual_topography_surface.lua)" = "a8767569bd893f8f167855c30698137f0a52aa3e"
       - name: Real LOVE render smoke
         env:
           OSMAN_LOVE_INTEGRATION_SMOKE: "1"
@@ -37,6 +52,30 @@ jobs:
           grep -q LOVE_INTEGRATION_SMOKE_OK /tmp/love-biome-log.txt
           find "$HOME/.local/share/love" -name world-player-biome-smoke.png -exec cp {} /tmp/world-player-biome-smoke.png \;
           test -s /tmp/world-player-biome-smoke.png
+      - name: R2 D real LOVE Xvfb four portrait PNG render
+        if: github.ref_name == 'experiment/worldbuild-r2-visual-20261018'
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/oyun-r2-visual-preview
+          cp game/love/tests/r2_visual_smoke.lua /tmp/oyun-r2-visual-preview/main.lua
+          for viewport in 320x700 360x780 411x890 720x1100; do
+            (
+              cd game/love
+              OSMAN_R2_VISUAL_DISPLAY="$viewport" timeout 90s xvfb-run -a love /tmp/oyun-r2-visual-preview > "/tmp/r2-$viewport.log" 2>&1
+            )
+            cat "/tmp/r2-$viewport.log"
+            grep -q "R2_VISUAL_LOVE_SMOKE_OK $viewport" "/tmp/r2-$viewport.log"
+            find "$HOME/.local/share/love" -name "r2-visual-$viewport.png" -exec cp {} "/tmp/r2-visual-$viewport.png" \;
+            test -s "/tmp/r2-visual-$viewport.png"
+            file "/tmp/r2-visual-$viewport.png" | grep -q "PNG image data"
+          done
+      - name: Upload R2 D visual PNG evidence
+        if: github.ref_name == 'experiment/worldbuild-r2-visual-20261018'
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-visual-portrait-smoke
+          path: /tmp/r2-visual-*.png
+          if-no-files-found: error
       - name: Upload render evidence
         uses: actions/upload-artifact@v4
         with:
