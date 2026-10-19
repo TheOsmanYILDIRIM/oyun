@@ -12,16 +12,47 @@ local a=H.new(authored,manifest)
 local b=H.new(authored,manifest)
 assert(a.production_enabled==false and a.persistence_supported==false)
 assert(a.query.seed==20261018 and a.query.generator_version==1)
-assert(#a.routes.crossings==0,"unauthorized fabricated crossing")
+assert(#a.routes.crossings==0,"unapproved bridge/ford created")
 local diag=a.routes:crossing_diagnostics(manifest.sites)
 assert(#diag==1 and diag[1].site_id=="site:fisilti-dere"
-  and not diag[1].valid and diag[1].water_bank_gap>45
-  and diag[1].water_bank_gap<46,"crossing geometry unexpectedly changed")
+  and diag[1].valid and diag[1].water_bank_gap==0,
+ "crossing site does not match real path-water geometry")
+local river=a.features.by_id["feature:fisilti-dere-izi"]
+assert(#river.points==4 and river.points[3][1]==704 and
+ river.points[3][2]==128,"user-approved crossing location moved")
+local path=a.features.by_id["feature:fisilti-ana-patika"]
+assert(path.points[5][1]==704 and path.points[5][2]==128)
+assert(a.features:crossing_site_status(
+ (function() for _,site in ipairs(manifest.sites) do
+  if site.id=="site:fisilti-dere" then return site end
+ end end)()).valid)
 assert(not pcall(function() a.features:resolve_crossings(manifest.sites,{
  {id="crossing:unsafe",site_id="site:fisilti-dere",kind="bridge",
  path_feature_id="feature:fisilti-ana-patika",
- water_feature_id="feature:fisilti-dere-izi",width=8,length=100}
-},2,.75) end),"fake crossing unexpectedly accepted")
+ water_feature_id="feature:fisilti-dere-izi",width=8,length=1}
+},2,.75) end),"short fake bridge should be rejected")
+local flow=a.routes:flow_report()
+assert(#flow==1 and flow[1].status=="consistent" and
+ flow[1].conflict_segments==0,"river segment rises against flow")
+for i=1,#river.points-1 do
+ local x,y=river.points[i][1],river.points[i][2]
+ local X,Y=river.points[i+1][1],river.points[i+1][2]
+ assert(a.topography:height(x,y)>a.topography:height(X,Y),
+  "every actual river centerline segment must flow downhill")
+end
+assert(a.valley:offset(704,128)<-1.99)
+assert(a.valley:offset(704,200)==0)
+assert(a.topography:height(704,128)<a.base:get_height(704,128)-1.99)
+assert(a.topography:height(704,200)==a.base:get_height(704,200))
+local center=a.query:surface_at(704,128)
+assert(center.wet and center.water_body and center.water_depth==2
+ and center.water_feature_id==river.id
+ and center.immersion==.5 and center.speed_multiplier==.55)
+assert(a.query:get_height(704,128)==a.topography:height(704,128))
+local crossingCost=a.query:route_cost({x=690,y=128},{x=718,y=128})
+assert(crossingCost.walkable and crossingCost.cost>28,
+ "wet but traversable crossing must retain water cost")
+
 for _,p in ipairs({{-512,-256},{-256,0},{0,0},{64,128},
  {255.99,128},{256,128},{256.01,128},{512,128},{616,62},
  {704,128},{2000,2000}}) do

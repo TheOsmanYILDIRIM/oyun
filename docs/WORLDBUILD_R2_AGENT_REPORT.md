@@ -1,5 +1,13 @@
 # OSMAN WORLD BUILDING R2 — AJAN H / A–F SİSTEM UYUMLULUĞU
 
+## H dere-vadi onarımı — 2026-10-19
+- **Decision:** User approved aligning the authored stream to the current valley/crossing coordinate; preserve immutable `site:fisilti-dere` (704,128), path, connector IDs, original waterfront site (616,62), seed/Generator v1.
+- **Observed terrain:** B's baseline `Field` creates noise-based elevation, not an authored valley channel. The new H-only `r2_valley_surface.lua` carves a narrow, C1-smooth deterministic 2-unit-deep riverbed around the corrected authored stream centerline (11-unit water half-width + 36-unit shoulder), vanishing to zero outside its corridor. No active production generator or save migration.
+- **Geometry:** Stream `feature:fisilti-dere-izi` changes from [536,56] → [616,62] → [735,74] to [536,56] → [616,62] → [704,128] → [735,74]. Main path and all 7 site anchors unchanged; older v1 pilot unchanged. Declared bridge/ford remains disabled (`crossings={}`) pending separate mechanics approval; C crossing site geometric validity and downhill segments are required in H adapter.
+- **Tests:** H Lua shared height/surface/mask, valley profile, downhill segments, water/path crossing, invalid short bridge, navigation cost and seams; C scoped regression expectations updated exclusively on H branch. Canonical Python v1/v2, JS↔Python, Stage5/6, real LÖVE PNG acceptance required.
+- **State:** verification pending for this new geometry (the older successful run #39237173365 only proves the earlier incompatible geometry and must not be reused as proof).
+
+
 ## Durum, kaynak ve koruma
 - **Agent:** H / sistem uyumluluğu ve hata onarımı.
 - **State:** `blocked` only for **user-approved geography/crossing decision**, remaining opt-in adapter and integrated CI **verified PASS**. G'nin geçit içeren oynanabilir pilotu için tam teslim henüz hazır değil.

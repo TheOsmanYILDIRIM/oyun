@@ -27,10 +27,30 @@ function M.new(a,m)
  valid_docs(a,m)
  local base=Base.new(a.seed)
  local region_query=Authored.new(a,base)
- local topography=Topo.new({world=region_query})
  local features=Features.new(a)
- -- No bridge/ford without a validated crossing geometry and approval.
+ local Valley=require("world.r2_valley_surface")
+ local valley=Valley.new(features)
+ local topography=Topo.new({
+  height_at=function(x,y) return valley:height(region_query,x,y) end
+ })
+ local site
+ for _,s in ipairs(m.sites) do
+  if s.id=="site:fisilti-dere" then
+   assert(not site,"duplicate crossing site");site=s
+  end
+ end
+ assert(site and site.role=="crossing"
+  and site.anchor[1]==704 and site.anchor[2]==128,
+  "approved crossing site missing")
+ local crossing=features:crossing_site_status(site)
+ assert(crossing.valid and crossing.water_bank_gap==0,
+  "approved river/route crossing geometry must be physically aligned")
+ -- Crossing geometry is valid; no speculative bridge/ford construction.
  local routes=Routes.new(region_query,features,{topography=topography,sites=m.sites,crossings={}})
+ local flow=routes:flow_report()
+ assert(#flow==1 and flow[1].status=="consistent"
+  and flow[1].conflict_segments==0,
+  "river must follow the real topographic downhill gradient")
  local query={field=routes.field,seed=a.seed,generator_version=1,map_id=a.map_id}
  function query:sample(x,y)
   local s=routes:sample(x,y)
@@ -79,7 +99,7 @@ function M.new(a,m)
   return old_build(self,x,y,r)
  end
  return {query=query,base=base,authored=region_query,topography=topography,
-  features=features,routes=routes,water=water,population=population,
+  features=features,valley=valley,routes=routes,water=water,population=population,
   manifest=m,authored_map=a,production_enabled=false,
   persistence_supported=false}
 end

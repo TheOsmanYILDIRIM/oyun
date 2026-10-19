@@ -20,7 +20,7 @@ local stream=Stream.new(scene.query,{size=256,step=32,max_loaded=48,build_budget
 local points
 function love.load()
  assert(love.window.setMode(w,h,{resizable=false,msaa=0}))
- if mode=="river" then camera.x,camera.y=616,62
+ if mode=="river" then camera.x,camera.y=704,128
  else camera.x,camera.y=64,128 end
  camera.zoom=1.4
  stream:update(camera,w,h,48)

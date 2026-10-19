@@ -35,18 +35,18 @@ assert(#features.features==4 and #manifest.sites==7)
 
 local diagnostics=r2:crossing_diagnostics(manifest.sites)
 assert(#diagnostics==1 and diagnostics[1].site_id=="site:fisilti-dere")
-assert(not diagnostics[1].valid
-  and diagnostics[1].reason=="no_path_water_intersection"
-  and diagnostics[1].water_bank_gap>35,
-  "A source has NO legitimate authored bridge at its crossing-site anchor")
+assert(diagnostics[1].valid
+  and diagnostics[1].reason=="verified_intersection"
+  and diagnostics[1].water_bank_gap==0,
+  "H approved river line must cross A's immutable site and main path")
 local invalid_crossing={id="crossing:fisilti-dere",
   site_id="site:fisilti-dere",kind="bridge",
   path_feature_id="feature:fisilti-ana-patika",
-  water_feature_id="feature:fisilti-dere-izi",width=8,length=50}
+  water_feature_id="feature:fisilti-dere-izi",width=8,length=1}
 rejects(function()
   Routes.new(facade,features,{topography=topography,sites=manifest.sites,
     crossings={invalid_crossing}})
-end,"A crossing must never become a fabricated bridge")
+end,"a physically invalid short bridge must be rejected")
 
 local wet,wet_signed=r2:water_mask(616,62)
 assert(wet and wet_signed>0)
@@ -236,7 +236,7 @@ rejects(function()
   Routes.new(base_fake,f,{topography=t_flat,crossings={bridge,bridge},sites={site}})
 end)
 
-print(string.format("R2_C_A_CROSSING_UNRESOLVED site=%s bank_gap=%.3f",
+print(string.format("R2_C_H_CROSSING_ALIGNED site=%s bank_gap=%.3f",
   diagnostics[1].site_id,diagnostics[1].water_bank_gap))
 print("R2_C_A_FLOW_STATUS "..flow_report[1].status)
 print("R2_FEATURES_HYDROLOGY_OK source=A_r2 B_topography=real Lua=both")
