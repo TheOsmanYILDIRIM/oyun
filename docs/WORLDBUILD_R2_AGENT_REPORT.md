@@ -1,6 +1,8 @@
 # OSMAN WORLD BUILDING R2 — AJAN H / A–F SİSTEM UYUMLULUĞU
 
 ## H dere-vadi onarımı — 2026-10-19
+- **Visual QA issue discovered on first repaired PNG:** 32 world-unit Marching contour sampling is coarser than the 22-unit-wide stream and produced visibly fragmented water, despite physically continuous C water membership. H's isolated river LÖVE smoke now samples water at 8-unit contour step. New PNG must be reopened; no claim of production FPS.
+- **Physical acceptance enhancement:** H tests validate all river centerline samples wet, crossing anchor intersection, admissible 64-unit bridge span as an uninstantiated candidate and fail-closed deep ford. No bridge is activated in gameplay.
 - **Decision:** User approved aligning the authored stream to the current valley/crossing coordinate; preserve immutable `site:fisilti-dere` (704,128), path, connector IDs, original waterfront site (616,62), seed/Generator v1.
 - **Observed terrain:** B's baseline `Field` creates noise-based elevation, not an authored valley channel. The new H-only `r2_valley_surface.lua` carves a narrow, C1-smooth deterministic 2-unit-deep riverbed around the corrected authored stream centerline (11-unit water half-width + 36-unit shoulder), vanishing to zero outside its corridor. No active production generator or save migration.
 - **Geometry:** Stream `feature:fisilti-dere-izi` changes from [536,56] → [616,62] → [735,74] to [536,56] → [616,62] → [704,128] → [735,74]. Main path and all 7 site anchors unchanged; older v1 pilot unchanged. Declared bridge/ford remains disabled (`crossings={}`) pending separate mechanics approval; C crossing site geometric validity and downhill segments are required in H adapter.

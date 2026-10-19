@@ -31,6 +31,32 @@ assert(not pcall(function() a.features:resolve_crossings(manifest.sites,{
  path_feature_id="feature:fisilti-ana-patika",
  water_feature_id="feature:fisilti-dere-izi",width=8,length=1}
 },2,.75) end),"short fake bridge should be rejected")
+-- The bridge geometry is physically admissible only as a dry *candidate*.
+-- We never instantiate it without separately approved build/gameplay.
+local candidate=a.features:resolve_crossings(manifest.sites,{
+ {id="crossing:verified-candidate",site_id="site:fisilti-dere",
+ kind="bridge",path_feature_id="feature:fisilti-ana-patika",
+ water_feature_id="feature:fisilti-dere-izi",width=8,length=64}
+},2,.75)
+assert(#candidate==1 and candidate[1].x==704 and
+ candidate[1].y==128 and candidate[1].length==64)
+assert(#a.routes.crossings==0,"candidate must not be auto-built")
+assert(not pcall(function() a.features:resolve_crossings(manifest.sites,{
+ {id="crossing:unsafe-ford",site_id="site:fisilti-dere",
+ kind="ford",path_feature_id="feature:fisilti-ana-patika",
+ water_feature_id="feature:fisilti-dere-izi",width=8}
+},2,.75) end),"2-unit-deep water is not an approved shallow ford")
+-- Water should remain continuous at all points along the new centerline.
+for i=1,#river.points-1 do
+ local p,q=river.points[i],river.points[i+1]
+ for sample=0,32 do
+  local u=sample/32
+  local x=p[1]*(1-u)+q[1]*u
+  local y=p[2]*(1-u)+q[2]*u
+  local wet=a.query:water_mask(x,y)
+  assert(wet,"authored river centerline has a dry gap")
+ end
+end
 local flow=a.routes:flow_report()
 assert(#flow==1 and flow[1].status=="consistent" and
  flow[1].conflict_segments==0,"river segment rises against flow")

@@ -16,7 +16,11 @@ local mode=os.getenv("OSMAN_R2_H_SCENE") or "river"
 assert(mode=="river" or mode=="spawn")
 local camera=Camera.new()
 local w,h,frames=720,1100,0
-local stream=Stream.new(scene.query,{size=256,step=32,max_loaded=48,build_budget=48})
+-- River width 22 world units: 32-unit Marching samples alias the stream.
+-- Use 8-unit world-space water contour sampling in the isolated diagnostic;
+-- the production game and Generator v1 remain unchanged.
+local stream=Stream.new(scene.query,{size=256,
+ step=mode=="river" and 8 or 32,max_loaded=48,build_budget=48})
 local points
 function love.load()
  assert(love.window.setMode(w,h,{resizable=false,msaa=0}))
