@@ -1,21 +1,28 @@
-# OSMAN WORLD BUILDING R2 — Agent D / Visual terrain and atmosphere
+# WORLDBUILD R2 — Agent D / organic ground, atmosphere and visual layers
 
-## Scope and decisions
-- Decision: approved B, hybrid shaderless organic dark-fantasy visual terrain. Three existing biome IDs and 18 material family IDs preserved. No third-party asset introduced.
-- Status: scoped implementation committed, real CI evidence pending; main remains untouched.
-- Branch: `experiment/worldbuild-r2-visual-20261018`.
-- Base A: `4d40a62c3b56733cbae5b7c78c563a626c2f01f4`; verified main at start: `4fa358ea42dbcb8b50ec956a7e14d247bf10f52b`.
-- Files: `game/love/world/materials.lua`, `game/love/world/terrain_renderer.lua`, `game/love/tests/r2_visual_terrain.lua`, `game/love/tests/r2_visual_smoke.lua`, existing `.github/workflows/love-world-player-integration.yml`, this branch-local report.
-- Rendering: deterministic world-space organic color variation; feathered Marching Squares biome/water boundaries; low/standard/high visual tessellation and detail flecks; optional verified B topography height and gradient lighting; shaderless restrained atmospheric veil. C facade-compatible query water field and path surface are optional; production physics/WorldQuery unchanged.
+## Delivery and scope
+- **State: DONE for the D-owned opt-in visual module and verified tests**; no main merge and no production R2 runtime activation.
+- **Approved design:** B hybrid organic dark-fantasy, shaderless/procedural, restrained muted meadow/forest/rock palettes. The existing **18 stable material-family IDs** remain unchanged; no unverified asset, new texture license, game mechanic or global RNG was introduced.
+- **Branch:** `experiment/worldbuild-r2-visual-20261018`.
+- **Base SHA:** A `4d40a62c3b56733cbae5b7c78c563a626c2f01f4` (its own report preserved on A). Main `4fa358ea42dbcb8b50ec956a7e14d247bf10f52b` at implementation start, still unchanged at tested commit.
+- **Tested functional HEAD:** `4fed768561c22228195a26372114e5a1a420bf6a`. Previous implementation `36889a348d0b98e2951669bd8fc42c4c0eb59ddc` was corrected after manually observing hard atmosphere bands. The later report-only commit is not recursively self-referenced here.
+- **Changed paths:** `game/love/world/materials.lua`, `game/love/world/terrain_renderer.lua`, `game/love/tests/r2_visual_terrain.lua`, `game/love/tests/r2_visual_smoke.lua`, **existing** `.github/workflows/love-world-player-integration.yml`, this branch-local `docs/WORLDBUILD_R2_AGENT_REPORT.md`.
 
-## Dependencies and blocked work
-- A world geography contract and immutable IDs unchanged.
-- B topography API from `experiment/worldbuild-r2-topography-20261018` HEAD `63b2baafffbd8f03842f1e44fcf6b169d1edff58`; blob SHA `a8767569bd893f8f167855c30698137f0a52aa3e`; CI fetch is immutable and read-only, no B-owned source copied into D.
-- C hydrology API from `experiment/worldbuild-r2-hydrology-20261018` HEAD `1f36bed46102db15d77741004adb9349b8f9409c`, real CI #39212455000 passed. C documents 45.838-world-unit actual bank gap at A-owned `site:fisilti-dere`. **BLOCKED**: do not display or activate an inferred bridge/ford. Coordinator/A owner must correct geometry, revalidate source and cross-system traversal/save parity. Renderer does not write crossing definitions.
-- Main, player, B/C/E/F, WorldQuery, physics, Generator v1, Stage5/6, Core/plasma, save/, user data and backups are read-only.
+## Renderer and contracts
+- Six already defined color-family IDs per biome (meadow, forest, rocky); continuous world-coordinate multi-frequency modulation, deterministic visual flecks, edge feathering using original world-field signed masks and Marching Squares mesh, without tile texture repetition.
+- Whole-world material-pass rendering order across visible chunks (meadow -> forest -> rocky -> water -> microdetails); removes rectangular overwrites from per-chunk layer interleaving. B elevation and gradient shading via **optional** `:height(x,y)` and `:sample(x,y)`, world-coordinate projection with consistent edge samples. Existing production caller needs no change.
+- Low / standard / high visual tessellation (64/32/16-unit grid); geometry cache invalidates when settings/adapter change. Continuous top-of-screen shaderless fog alpha mesh replaces hard horizontal overlay bands. All R2 facade hooks are opt-in; this is not full entity/occlusion physics.
+- Compatibility with C's eventual validated `query.field:channel(...,"water")` and optional `:surface_at` path marker. No guessed crossing, wet dry speed change, collision, save, generator, IDs or authored asset modification.
 
-## Verification ledger
-- **Passed:** Beyin task creation official request `oyun_r2_visual_create_20261019_gpt6_d01` status applied and canonical task verified revision 1 active.
-- **Pending:** Lua 5.4, LuaJIT, real LOVE/Xvfb four portrait PNG test, run/job/step PASS, PNG manual inspection and artifact integrity. Actual execution required; a workflow committed is not a test result.
-- **Unverified/out of D scope:** real Android performance/FPS, full A+B+C+E+F gameplay integration, object/character occlusion, real crossing, staged elevation collision, Stage6 save replay. R2 production activation must be performed separately by coordinator.
-- **Beyin:** `agy-vault/main/tasks/oyun-worldbuild-r2-visual-20261019.md` revision 1 active at pre-CI stage; post-CI revision and status must be independently read.
+## Actual CI proof
+- **PASS** [LOVE world-player integration #39228090552](https://github.com/TheOsmanYILDIRIM/oyun/actions/runs/39228090552), implementation HEAD `4fed7685`, job `integration` **117979209966**, **13/13 steps success**. Step *R2 D seam, 18 materials, quality and height tests (Lua 5.4 + LuaJIT)* SUCCESS; logs show `R2_VISUAL_MATERIAL_MESH_OK variants=18 seam=9 profiles=3` from both interpreters. Step *R2 D verified B topography source* SUCCESS. Existing pure Lua and real production LOVE world/player smoke steps SUCCESS. Step *R2 D real LOVE Xvfb four portrait PNG render* SUCCESS; exact log tags `R2_VISUAL_LOVE_SMOKE_OK` for **320x700, 360x780, 411x890, 720x1100**; PNG upload SUCCESS.
+- **PASS** [quality #39228092247](https://github.com/TheOsmanYILDIRIM/oyun/actions/runs/39228092247), same HEAD, job `test` **117979217454**, **14/14 steps success**, Python schema/validator and Lua 5.4/LuaJIT Stage5/Stage6, WorldQuery mesh, real LOVE Stage5, Stage6 checkpoint/reopen (log `LOVE_STAGE6_REOPEN_OK revision=4`) success. No failures in these scoped runs.
+- **Artifacts:** `r2-visual-portrait-smoke` ID **12176415156**, 815,240 bytes; archive downloaded, ZIP CRC checked (`unzip -t` all four OK), extracted four RGB PNGs with exact dimensions, SHA256 archive `dfe80d9623ae06388624279d15b3390fde828e5f61b37b24f3a6201b0af4887d`. PNG SHA256: 320x700 `55661fbea6a1a2f1163a557e87b832beabbc51be6d81ecbec05f9a9576f27d07`; 360x780 `041c0edcf87274952918d741820553de0e961e076deb54e2f0abe488e781b3cd`; 411x890 `31b77b195cca72fa160cc652b520f8892f2d1a0c8279268c30cc93f0a780ad44`; 720x1100 `fa418827a80824b725bc87533102a7df2bdfb7a20ac10e0c175412c6281748`.
+- **Manual visual inspection:** initial PNG at `36889a3` showed obvious horizontal hard bands; those were fixed. Reopened the final 320x700 and 720x1100 PNG files and observed continuous smooth tint/fog and **no obvious hard rectangular tile/chunk seams**. Visual appearance remains intentionally understated and relatively flat without authored textured assets or full production R2 object/surface activation; this screenshot must NOT be presented as a fully integrated R2 world.
+
+## Blocked / unverified and handoff
+- **BLOCKED external dependency:** C branch `experiment/worldbuild-r2-hydrology-20261018` (HEAD `1f36bed46102db15d77741004adb9349b8f9409c`; actual CI #39212455000 PASS) found a **45.838-world-unit gap** from A `site:fisilti-dere` to the water bank. A/coordination owner must author matching route/water crossing geometry and site anchor, validate canonical v1+v2 topology, then integration owner validates true bridge/ford collision, renderer, navigation, Stage5/6. D fabricated **no** bridge and must not silently activate one.
+- B API `topography_surface.lua` verified read-only at blob `a8767569bd893f8f167855c30698137f0a52aa3e`, SHA `63b2baafffbd8f03842f1e44fcf6b169d1edff58`. A/B/C/E/F agent paths read-only; no blind branch merge.
+- **Unverified / separate coordinator scope:** 32768² full world production activation, C authored river/path in real production, full character/object occlusion against height, gameplay physics, mesh/physics parity under real A+B+C authored content, persistent crossing/save migration, real Android touch/FPS and GPU budget; do not equate LÖVE Xvfb to physical phone.
+- **Protection:** main, `main.lua`, Generator v1, stable IDs, WorldQuery/field, topography physics, C routes, E ecology, F editor, save/, Stage5/6, Core/plasma, backups and user storage untouched.
+- **Beyin:** `agy-vault/main/tasks/oyun-worldbuild-r2-visual-20261019.md` was independently verified at revision **1 / active** after official request `oyun_r2_visual_create_20261019_gpt6_d01` status **applied**, run **39225179209**. Final status/revision recorded only after official done update and reread.
