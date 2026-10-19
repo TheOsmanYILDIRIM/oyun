@@ -1,7 +1,7 @@
 name: LOVE liquid traversal and immersion
 on:
   push:
-    branches: [experiment/liquid-traversal-v1, main]
+    branches: [experiment/liquid-traversal-v1, experiment/worldbuild-r2-hydrology-20261018, main]
     paths:
       - 'game/love/**'
       - '.github/workflows/love-liquid-traversal.yml'
@@ -29,6 +29,21 @@ jobs:
           lua5.4 tests/stage4_deep.lua
           lua5.4 tests/liquid_traversal.lua
           luajit tests/liquid_traversal.lua
+      - name: R2 C real B topography and Stage5/Stage6 regressions (Lua 5.4 + LuaJIT)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin refs/heads/experiment/worldbuild-r2-topography-20261018
+          test "$(git rev-parse FETCH_HEAD)" = "63b2baafffbd8f03842f1e44fcf6b169d1edff58"
+          export OSMAN_R2_B_TOPOGRAPHY_PATH="$RUNNER_TEMP/r2-b-topography.lua"
+          git show FETCH_HEAD:game/love/world/topography_surface.lua > "$OSMAN_R2_B_TOPOGRAPHY_PATH"
+          test "$(git hash-object "$OSMAN_R2_B_TOPOGRAPHY_PATH")" = "a8767569bd893f8f167855c30698137f0a52aa3e"
+          cd game/love
+          for interpreter in lua5.4 luajit; do
+            "$interpreter" tests/r2_features_hydrology.lua
+            "$interpreter" tests/stage5_end_to_end.lua
+            "$interpreter" tests/save_v2_spec.lua
+          done
       - name: Real LOVE submerged player smoke PNG
         env:
           OSMAN_LOVE_LIQUID_SMOKE: "1"
