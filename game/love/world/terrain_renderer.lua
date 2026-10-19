@@ -147,21 +147,35 @@ function Terrain.draw(stream,camera,width,height,options)
  lg.scale(camera.zoom)
  local sx,sy=Iso.project(camera.x,camera.y)
  lg.translate(-sx,-sy)
+ local cached={}
  for _,chunk in ipairs(stream:visible()) do
   if chunk._terrain_key~=key then Terrain.invalidate(chunk) end
-  local drawables=chunk._terrain_meshes or rebuild(chunk,stream.query,opts,key)
-  lg.setColor(1,1,1,1)
-  for _,name in ipairs({"meadow","forest","rocky","water","detail"}) do
+  cached[#cached+1]=chunk._terrain_meshes or rebuild(chunk,stream.query,opts,key)
+ end
+ -- Render whole visible world in material passes. Painting a meadow chunk
+ -- after a neighbour's forest/water layer creates hard rectangular seams.
+ lg.setColor(1,1,1,1)
+ for _,name in ipairs({"meadow","forest","rocky","water","detail"}) do
+  for _,drawables in ipairs(cached) do
    if drawables[name] then lg.draw(drawables[name]) end
   end
  end
  lg.pop()
  if options.atmosphere~=false then
+  -- Smooth screen-space vertex alpha, never separate hard-edged rectangles.
+  if not Terrain._fog or Terrain._fog_width~=width or Terrain._fog_height~=height then
+   if Terrain._fog then Terrain._fog:release() end
+   local function p(x,y,alpha) return {x,y,0,0,.07,.13,.14,alpha} end
+   local horizon=height*.45
+   Terrain._fog=lg.newMesh({
+    p(0,0,.17),p(width,0,.17),p(width,horizon,0),
+    p(0,0,.17),p(width,horizon,0),p(0,horizon,0)
+   },"triangles","static")
+   Terrain._fog_width,Terrain._fog_height=width,height
+  end
   lg.push("all")
-  lg.setColor(.08,.14,.15,.20)
-  lg.rectangle("fill",0,0,width,height*.15)
-  lg.setColor(.08,.14,.15,.08)
-  lg.rectangle("fill",0,height*.15,width,height*.18)
+  lg.setColor(1,1,1,1)
+  lg.draw(Terrain._fog)
   lg.pop()
  end
 end

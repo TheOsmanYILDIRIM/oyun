@@ -25,7 +25,7 @@ assert(math.abs(Materials.edge_alpha(.05,.1)-.5)<1e-9)
 assert(not pcall(function() Materials.color("forest",0/0,0) end))
 assert(not pcall(function() Terrain.profile("ultra") end))
 assert(Terrain.profile("low").grid>Terrain.profile("high").grid)
-local draw_count=0
+local draw_count,rectangles=0,0
 love={graphics={
  newMesh=function(vertices,mode,usage)
   assert(mode=="triangles" and usage=="static" and #vertices%3==0)
@@ -36,7 +36,7 @@ love={graphics={
  clear=function() end,push=function() end,pop=function() end,
  translate=function() end,scale=function() end,
  setColor=function() end,draw=function() draw_count=draw_count+1 end,
- rectangle=function() end}}
+ rectangle=function() rectangles=rectangles+1 end}}
 local query=Query.new(20261015)
 local chunks=Chunks.new(query,{size=256,step=32})
 local a,b=chunks:build(0,0),chunks:build(1,0)
@@ -47,6 +47,7 @@ local topo={
  sample=function(_,x,y) return {gradient_x=.01,gradient_y=.01} end}
 Terrain.draw(stream,camera,360,780,{topography=topo,quality="standard"})
 assert(draw_count>0 and a._terrain_meshes.meadow and b._terrain_meshes.meadow)
+assert(rectangles==0,"hard-edged atmosphere overlay is prohibited")
 local function key(v)
  return string.format("%.8f:%.8f:%.6f:%.6f:%.6f:%.4f",
    v[1],v[2],v[5],v[6],v[7],v[8])
