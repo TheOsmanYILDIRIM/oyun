@@ -68,9 +68,6 @@ setup='''local active_texture=options.grass_preview~=false
   if not Terrain._grass_shader then
    Terrain._grass_shader=lg.newShader([[
      extern Image secondGrass;
-     extern vec2 cameraProjected;
-     extern vec2 viewportSize;
-     extern float cameraZoom;
      vec4 effect(vec4 color, Image firstGrass, vec2 uv, vec2 pixel) {
        // UV is interpolated from absolute WORLD coordinates, including relief.
        float wx=uv.x*192.0;
@@ -96,9 +93,6 @@ setup='''local active_texture=options.grass_preview~=false
    end
   end
   texture_pair=Terrain._grass_images
-  shader:send("viewportSize",{width,height})
-  shader:send("cameraZoom",camera.zoom)
-  shader:send("cameraProjected",{sx,sy})
  end
  '''
 s=s.replace(needle,setup+needle)
