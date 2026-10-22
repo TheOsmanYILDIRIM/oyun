@@ -39,6 +39,10 @@ for a,b in [
 old_stamp='"r2-fisilti-20261019-pinned"'
 assert s.count(old_stamp)==1,"cache stamp contract changed"
 s=s.replace(old_stamp,'"r2-fisilti-grass-worlduv-v2"')
+# Profile-only opt-out for grass, no change to checked-out production sources.
+flag='local r2_pilot=r2_pilot_enabled and require("world.r2_playable").new() or nil'
+assert s.count(flag)==1,"pilot init contract changed"
+s=s.replace(flag,flag+'\nif r2_pilot and os.getenv("OSMAN_R2_PROFILE")=="1" then\n r2_pilot.render_options.grass_preview=os.getenv("OSMAN_PROFILE_TEXTURE")~="0"\nend')
 main.write_text(s)
 pilot=root/"world/r2_playable.lua"
 s=pilot.read_text()
