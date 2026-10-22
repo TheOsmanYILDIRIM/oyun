@@ -14,7 +14,7 @@ if os.getenv("OSMAN_R2_OP_AUDIT")=="1" then
  local bootmax=tonumber(os.getenv("OSMAN_R2_OP_BOOT_MAX")) or 1500
  local csv=assert(io.open("R2_OPERATION_FRAMES.csv","w"))
  local operation=assert(io.open("R2_OPERATION_CALLS.csv","w"))
- csv:write("frame,phase,frame_ms,update_ms,draw_ms,loaded,needed,pending,evictions,mesh_creations,drawcalls,texture_mib,lua_kib,gc_kib_delta,x,y,action\n")
+ csv:write("frame,phase,frame_ms,update_ms,draw_ms,loaded,needed,pending,evictions,canvas_switches,drawcalls,texture_mib,lua_kib,gc_kib_delta,x,y,action\n")
  operation:write("frame,phase,function,calls,total_ms,max_ms\n")
  local acc,phase,frame={}, "boot",0
  local action="boot"
@@ -109,11 +109,11 @@ if os.getenv("OSMAN_R2_OP_AUDIT")=="1" then
    old_resident=resident
    local g=love.graphics.getStats()
    local gc=collectgarbage("count")
-   local mesh=(g.canvasSwitches or 0)
+   local canvas_switches=(g.canvasSwitches or 0)
    csv:write(string.format("%d,%s,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%d,%.3f,%.1f,%.1f,%.3f,%.3f,%s\n",
       measured,phase,update_ms+draw_ms,update_ms,draw_ms,
       stats.loaded or 0,stats.needed or 0,stats.pending or 0,
-      evict,mesh,g.drawcalls or 0,(g.texturememory or 0)/1048576,gc,gc-old_gc,
+      evict,canvas_switches,g.drawcalls or 0,(g.texturememory or 0)/1048576,gc,gc-old_gc,
       player.x,player.y,action))
    old_gc=gc
    for k,a in pairs(acc) do
