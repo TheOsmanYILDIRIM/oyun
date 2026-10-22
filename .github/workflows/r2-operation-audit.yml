@@ -1,0 +1,97 @@
+name: R2 operation-level root cause audit
+on:
+  push:
+    branches: [experiment/r2-grass-texture-preview-20261022]
+    paths:
+      - scripts/r2_operation_instrument.py
+      - .github/workflows/r2-operation-audit.yml
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LÖVE Lua and PIL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y love xvfb lua5.4 luajit python3-pil
+      - name: Build isolated full R2 gameplay and add operation tracing
+        run: |
+          mkdir -p "$RUNNER_TEMP/report"
+          python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/op-game" "$RUNNER_TEMP/report/Osman_R2_OpAudit.love"
+          python3 scripts/r2_operation_instrument.py "$RUNNER_TEMP/op-game"
+          luac5.4 -p "$RUNNER_TEMP/op-game/main.lua"
+          cd game/love
+          lua5.4 tests/player_stage3.lua
+          lua5.4 tests/r2_topography_surface.lua
+      - name: Real gameplay callback sequences and single-frame operation traces
+        shell: bash
+        run: |
+          set -euo pipefail
+          export OSMAN_R2_PILOT=1 OSMAN_R2_OP_AUDIT=1 OSMAN_R2_OP_FRAMES=180
+          export OSMAN_CHUNK_CACHE_PILOT=0
+          for mode in idle player_walk; do
+            export OSMAN_R2_OP_MOTION="$mode"
+            export XDG_DATA_HOME="$RUNNER_TEMP/user-$mode"
+            mkdir -p "$XDG_DATA_HOME"
+            cd "$RUNNER_TEMP/report"
+            timeout 480s xvfb-run -a -s '-screen 0 1280x1800x24' \
+              love "$RUNNER_TEMP/op-game" 2>&1 | tee "$mode.log"
+            grep -q 'R2_OPERATION_DONE frames=180' "$mode.log"
+            mv R2_OPERATION_FRAMES.csv "$mode-frames.csv"
+            mv R2_OPERATION_CALLS.csv "$mode-calls.csv"
+          done
+      - name: Correlate slowest frames with exact operations
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          python3 - <<'PY'
+          import csv,json,pathlib,statistics
+          result={}
+          for name in ("idle","player_walk"):
+            frames=list(csv.DictReader(open(name+"-frames.csv")))
+            calls=list(csv.DictReader(open(name+"-calls.csv")))
+            assert len(frames)==180 and len(calls)>0,(name,len(frames),len(calls))
+            indexed={}
+            for row in calls:indexed.setdefault(int(row["frame"]),[]).append(row)
+            ranked=sorted(frames,key=lambda row:float(row["frame_ms"]),reverse=True)
+            total={}
+            for row in calls:
+              a=total.setdefault(row["function"],dict(calls=0,total_ms=0,max_ms=0))
+              a["calls"]+=int(row["calls"])
+              a["total_ms"]+=float(row["total_ms"])
+              a["max_ms"]=max(a["max_ms"],float(row["max_ms"]))
+            trace=[]
+            for f in ranked[:12]:
+              k=int(f["frame"])
+              expensive=sorted(indexed.get(k,[]),key=lambda a:float(a["total_ms"]),reverse=True)[:12]
+              trace.append(dict(frame=k,ms=float(f["frame_ms"]),action=f["action"],
+                loaded=int(f["loaded"]),pending=int(f["pending"]),evictions=int(f["evictions"]),
+                functions=[dict(name=r["function"],calls=int(r["calls"]),total_ms=round(float(r["total_ms"]),3),max_ms=round(float(r["max_ms"]),3)) for r in expensive]))
+            timings=sorted(float(x["frame_ms"]) for x in frames)
+            result[name]=dict(
+              p50=timings[89],p95=timings[170],p99=timings[178],
+              max=timings[-1],distance=((float(frames[-1]["x"])-float(frames[0]["x"]))**2+(float(frames[-1]["y"])-float(frames[0]["y"]))**2)**.5,
+              function_totals=sorted(total.items(),key=lambda x:x[1]["total_ms"],reverse=True),
+              slowest_frames=trace)
+          pathlib.Path("R2_OPERATIONS.json").write_text(json.dumps(result,indent=2))
+          with open("R2_OPERATIONS.md","w") as out:
+            out.write("# R2 Operation root-cause report\n\nActual Linux/Xvfb LÖVE, not Android or GPU profiler. Nested function totals overlap; do not sum them.\n\n")
+            for mode,val in result.items():
+              out.write("## "+mode+"\n\n")
+              out.write("Frame p50/p95/p99: %.3f / %.3f / %.3f ms; distance %.1f world units\n\n"%(val["p50"],val["p95"],val["p99"],val["distance"]))
+              out.write("|Function|Calls|Total ms|Max call ms|\n|---|---:|---:|---:|\n")
+              for fn,m in val["function_totals"][:28]:
+                out.write("|%s|%s|%.3f|%.3f|\n"%(fn,m["calls"],m["total_ms"],m["max_ms"]))
+              out.write("\n12 slowest frames and their function traces are in JSON.\n\n")
+          print(open("R2_OPERATIONS.md").read())
+          PY
+      - name: Upload all raw observations and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osman-R2-Operation-Root-Cause
+          path: ${{ runner.temp }}/report/
+          if-no-files-found: warn
