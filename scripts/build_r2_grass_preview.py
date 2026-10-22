@@ -35,6 +35,10 @@ for a,b in [
 ]:
  assert s.count(a)==1,a
  s=s.replace(a,b)
+# Discard old per-user OSC geometry: older cache payloads have (0,0) UV.
+old_stamp='"r2-fisilti-20261019-pinned"'
+assert s.count(old_stamp)==1,"cache stamp contract changed"
+s=s.replace(old_stamp,'"r2-fisilti-grass-worlduv-v2"')
 main.write_text(s)
 pilot=root/"world/r2_playable.lua"
 s=pilot.read_text()
@@ -49,6 +53,12 @@ assert n==1,n
 pilot.write_text(s)
 renderer=root/"world/terrain_renderer.lua"
 s=renderer.read_text()
+# Bind grass UV to immutable WORLD mesh coordinates before projection;
+# screen-pixel reconstruction drifts on R2 topography and camera movement.
+old_vertex='local v={geo[1],geo[2],0,0,math.min(1,color[1]*shade),'
+new_vertex='local v={geo[1],geo[2],x/192,y/192,math.min(1,color[1]*shade),'
+assert s.count(old_vertex)==1,"world-UV vertex contract changed"
+s=s.replace(old_vertex,new_vertex)
 needle='local cached={}\n local count_total=0'
 assert s.count(needle)==1
 setup='''local active_texture=options.grass_preview~=false
@@ -62,10 +72,10 @@ setup='''local active_texture=options.grass_preview~=false
      extern vec2 viewportSize;
      extern float cameraZoom;
      vec4 effect(vec4 color, Image firstGrass, vec2 uv, vec2 pixel) {
-       vec2 p=(pixel-viewportSize*0.5)/cameraZoom+cameraProjected;
-       float wx=(p.x/0.70710678118+p.y/0.35355339059)*0.5;
-       float wy=(p.y/0.35355339059-p.x/0.70710678118)*0.5;
-       vec2 tuv=fract(vec2(wx,wy)/192.0);
+       // UV is interpolated from absolute WORLD coordinates, including relief.
+       float wx=uv.x*192.0;
+       float wy=uv.y*192.0;
+       vec2 tuv=fract(uv);
        vec4 one=Texel(firstGrass,tuv);
        vec4 two=Texel(secondGrass,tuv);
        float drift=0.5+0.5*sin(wx*0.013+wy*0.011)*cos(wx*0.007-wy*0.012);
