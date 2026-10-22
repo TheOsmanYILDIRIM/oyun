@@ -45,6 +45,39 @@ jobs:
             test -s "r2-profile-$case.csv"
             echo "::endgroup::"
           done
+      - name: Cold and warm persistent cache with actual avatar movement
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          export XDG_DATA_HOME="$RUNNER_TEMP/cache-player-shared"
+          mkdir -p "$XDG_DATA_HOME"
+          export OSMAN_R2_PROFILE=1 OSMAN_PROFILE_TEXTURE=1 OSMAN_CHUNK_CACHE_PILOT=1
+          export OSMAN_R2_PROFILE_FRAMES=120 OSMAN_R2_PROFILE_BOOT_MAX=3000
+          for case in textured_cache_cold_walk textured_cache_warm_walk; do
+            export OSMAN_R2_PROFILE_MODE="$case"
+            echo "::group::$case"
+            timeout 420s xvfb-run -a -s '-screen 0 1280x1800x24' \
+              love "$RUNNER_TEMP/game" 2>&1 | tee "$case.log"
+            grep -q "R2_PROFILE_DONE mode=$case frames=120" "$case.log"
+            test -s "r2-profile-$case.csv"
+            echo "::endgroup::"
+          done
+          python3 - <<'PY'
+          import csv,json
+          d={}
+          for case in ("textured_cache_cold_walk","textured_cache_warm_walk"):
+            rows=list(csv.DictReader(open(f"r2-profile-{case}.csv")))
+            assert len(rows)==120,(case,len(rows))
+            def pct(col,q):
+              v=sorted(float(row[col]) for row in rows)
+              return round(v[min(len(v)-1,int((len(v)-1)*q))],3)
+            d[case]={k:{'p50':pct(k,.5),'p95':pct(k,.95),'p99':pct(k,.99)} for k in ('elapsed_ms','draw_ms','terrain_ms','stream_ms','objects_ms','lua_kib','texture_mb','drawcalls')}
+            for k in ('cache_hits','cache_misses','cache_invalid','cache_writes'):
+              d[case][k+'_end']=float(rows[-1][k])
+          with open('R2_CACHE_COLD_WARM.json','w') as f:json.dump(d,f,indent=2)
+          print('R2_COLD_WARM_PROFILE_COMPLETE',json.dumps(d))
+          PY
       - name: Summarize all bottlenecks and before-after comparisons
         shell: bash
         run: |
