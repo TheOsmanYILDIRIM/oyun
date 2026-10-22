@@ -1,0 +1,62 @@
+name: R2 grass full-game preview package
+on:
+  push:
+    branches: [experiment/r2-grass-texture-preview-20261022]
+    paths:
+      - scripts/build_r2_grass_preview.py
+      - .github/workflows/r2-grass-preview.yml
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install real LÖVE, Lua and image tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y love xvfb lua5.4 luajit python3-pil
+      - name: Build full game from source in disposable staging
+        run: |
+          python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/osman-grass" "$RUNNER_TEMP/export/Osman_Oyun_R2_Grass_Preview.love"
+          cd game/love
+          lua5.4 tests/player_stage3.lua
+          luajit tests/player_stage3.lua
+          lua5.4 tests/r2_topography_surface.lua
+          luajit tests/r2_topography_surface.lua
+          lua5.4 tests/save_v2_spec.lua
+      - name: Real LÖVE package smoke 360x780
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XDG_DATA_HOME="$RUNNER_TEMP/grass-test-user"
+          mkdir -p "$XDG_DATA_HOME"
+          OSMAN_CHUNK_CACHE_SMOKE=1 OSMAN_CACHE_DISPLAY=360x780 timeout 240s \
+            xvfb-run -a love "$RUNNER_TEMP/export/Osman_Oyun_R2_Grass_Preview.love" \
+            2>&1 | tee "$RUNNER_TEMP/export/engine.log"
+          grep -q 'CHUNK_CACHE_GAME_SMOKE_OK' "$RUNNER_TEMP/export/engine.log"
+          shot="$(find "$XDG_DATA_HOME" -name 'chunk-cache-game.png' -print -quit)"
+          test -n "$shot" && test -s "$shot"
+          cp "$shot" "$RUNNER_TEMP/export/R2_Grass_Preview_360x780.png"
+          file "$RUNNER_TEMP/export/R2_Grass_Preview_360x780.png" | grep -q PNG
+          echo GRASS_FULL_GAME_LOVE_ENGINE_OK
+      - name: Confirm content and hashes
+        run: |
+          python3 - <<'PY'
+          import hashlib,pathlib,zipfile
+          p=pathlib.Path(__import__("os").environ["RUNNER_TEMP"])/"export/Osman_Oyun_R2_Grass_Preview.love"
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              for biome in ("meadow","forest","rocky"):
+                  for n in (0,1):
+                      assert "assets/grass_%s_%d.png"%(biome,n) in z.namelist()
+              assert "main.lua" in z.namelist()
+          print("PACKAGE_VERIFIED",p.stat().st_size,hashlib.sha256(p.read_bytes()).hexdigest())
+          PY
+      - name: Upload complete game and screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osman-Oyun-R2-Grass-Full-Preview
+          path: ${{ runner.temp }}/export/
+          if-no-files-found: error
