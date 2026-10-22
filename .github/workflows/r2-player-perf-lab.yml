@@ -1,0 +1,84 @@
+name: R2 player-behavior full performance laboratory
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/r2-grass-texture-preview-20261022]
+    paths:
+      - .github/workflows/r2-player-perf-lab.yml
+      - scripts/r2_profile_instrument.py
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LÖVE/Lua and Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y love xvfb lua5.4 luajit python3-pil
+      - name: Make isolated complete playable game with six grass textures
+        run: |
+          mkdir -p "$RUNNER_TEMP/report"
+          python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/game" "$RUNNER_TEMP/report/R2_Grass_Profiling_Game.love"
+          python3 scripts/r2_profile_instrument.py "$RUNNER_TEMP/game"
+          luac5.4 -p "$RUNNER_TEMP/game/main.lua" "$RUNNER_TEMP/game/world/terrain_renderer.lua"
+      - name: Four matched player simulations in real LÖVE/Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          for case in baseline_idle textured_idle baseline_walk textured_walk; do
+            echo "::group::R2_PROFILE_$case"
+            export XDG_DATA_HOME="$RUNNER_TEMP/user-$case"
+            mkdir -p "$XDG_DATA_HOME"
+            export OSMAN_R2_PROFILE=1
+            export OSMAN_R2_PROFILE_MODE="$case"
+            export OSMAN_R2_PROFILE_FRAMES=240
+            if [[ "$case" == baseline* ]]; then export OSMAN_PROFILE_TEXTURE=0; else export OSMAN_PROFILE_TEXTURE=1; fi
+            # Same R2 seed and avatar movement; persistent chunk cache is deliberately
+            # disabled for this first isolation pass to expose mesh and draw bottlenecks.
+            export OSMAN_CHUNK_CACHE_PILOT=0
+            OSMAN_R2_PILOT=1 timeout 540s xvfb-run -a -s '-screen 0 1280x1800x24' \
+              love "$RUNNER_TEMP/game" 2>&1 | tee "$case.log"
+            grep -q "R2_PROFILE_DONE mode=$case frames=240" "$case.log"
+            test -s "r2-profile-$case.csv"
+            echo "::endgroup::"
+          done
+      - name: Summarize all bottlenecks and before-after comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          python3 - <<'PY'
+          import csv,statistics,json,pathlib,math
+          root=pathlib.Path(".")
+          fields=["elapsed_ms","update_ms","draw_ms","stream_ms","terrain_ms","objects_ms","loaded","pending","mesh_ready","object_cold_ms","lua_kib","drawcalls","texture_mb"]
+          result={}
+          for mode in ("baseline_idle","textured_idle","baseline_walk","textured_walk"):
+            rows=list(csv.DictReader(open(f"r2-profile-{mode}.csv")))
+            assert len(rows)==240,(mode,len(rows))
+            out={}
+            for k in fields:
+              vals=sorted(float(r[k]) for r in rows)
+              out[k]={"p50":round(vals[119],3),"p95":round(vals[227],3),"p99":round(vals[237],3),"max":round(vals[-1],3)}
+            out["distance"]=round(math.hypot(float(rows[-1]["x"])-float(rows[0]["x"]),float(rows[-1]["y"])-float(rows[0]["y"])),2)
+            out["object_cold_queries"]=sum(int(r["object_cold_queries"]) for r in rows)
+            out["cache_hits_end"]=int(rows[-1]["cache_hits"])
+            out["cache_misses_end"]=int(rows[-1]["cache_misses"])
+            result[mode]=out
+          with open("R2_PERF_REPORT.json","w") as f:json.dump(result,f,indent=2)
+          with open("R2_PERF_REPORT.md","w") as f:
+            f.write("# Osman R2 Player Performance Laboratory\n\nLinux/Xvfb proxy, not Android GPU/FPS. Real production LÖVE and input callbacks.\n\n")
+            f.write("|Mode|Frame p50|Frame p95|Frame p99|Draw p95|Terrain p95|Objects p95|Stream p95|Movement world units|\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+            for mode,out in result.items():
+              f.write(f'|{mode}|{out["elapsed_ms"]["p50"]}|{out["elapsed_ms"]["p95"]}|{out["elapsed_ms"]["p99"]}|{out["draw_ms"]["p95"]}|{out["terrain_ms"]["p95"]}|{out["objects_ms"]["p95"]}|{out["stream_ms"]["p95"]}|{out["distance"]}|\n')
+            f.write("\nDetailed distributions and RAM/drawcalls are in JSON; frame CSV includes per-frame loading and cache metrics.\n")
+          print(open("R2_PERF_REPORT.md").read())
+          PY
+      - name: Upload unified performance audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osman-R2-Player-Perf-Lab
+          path: ${{ runner.temp }}/report/
+          if-no-files-found: warn
