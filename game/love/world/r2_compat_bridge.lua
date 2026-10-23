@@ -34,7 +34,8 @@ function M.new(a,m)
   height_at=function(x,y) return valley:height(region_query,x,y) end,
   -- Explicit R2 static-world opt-in: preserve the exact 5-point cliff
   -- classification while reusing it during repeated fixed physics steps.
-  static_collider_cache=true
+  static_collider_cache=true,
+  static_height_cache=os.getenv("OSMAN_R2_HEIGHT_CACHE")=="1"
  })
  local site
  for _,s in ipairs(m.sites) do
