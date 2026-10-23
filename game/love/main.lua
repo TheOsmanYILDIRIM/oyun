@@ -587,7 +587,12 @@ function love.draw()
   g.print("COLLECT",safe_x+safe_w-120,safe_y+safe_h-149)
   local hud_safe={x=safe_x,y=safe_y,w=safe_w,h=safe_h}
   stage_hud:draw(inventory,crafting,hud_safe,placement_rotation,route_status)
-  stat_hud:draw(g,hud_safe,progression)
+  -- Inventory panels and the STATS toggle otherwise overlap the first
+  -- inventory row at some safe-area heights. R2 menus are modal; reopen
+  -- STATS after closing BAG. Historical Stage5 default stays unchanged.
+  if not (stage_hud.compact_layout and stage_hud.open) then
+    stat_hud:draw(g,hud_safe,progression)
+  end
   local bx,by=joystick_center()
   g.setColor(.2,.3,.34,.6)
   if not (stage_hud.compact_layout and stage_hud.open and safe_h<680) then
@@ -746,7 +751,8 @@ local function press(id,x,y)
   fingers[id]={x=x,y=y,origin_x=x,origin_y=y,move=false}
   local sx,sy,sw,sh=safe_area()
   local safe={x=sx,y=sy,w=sw,h=sh}
-  local stat_hit=stat_hud:hit(x,y,safe)
+  local stat_hit=not (stage_hud.compact_layout and stage_hud.open)
+    and stat_hud:hit(x,y,safe)
   if stat_hit then
     fingers[id].stats=stat_hit
     return

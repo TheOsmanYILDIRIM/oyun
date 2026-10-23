@@ -21,6 +21,14 @@ if os.getenv("OSMAN_R2_DISPLAY_MATRIX")=="1" then
  local index,stable,ticks=0,0,0
  local override_safe=false
  local normal_safe=safe_area
+ -- Fail the real LÖVE visual job if the production draw tries to render
+ -- an invisible-but-still-hit-testable STATS toggle over open R2 BAG.
+ local actual_stat_draw=stat_hud.draw
+ function stat_hud:draw(...)
+  assert(not (stage_hud.compact_layout and stage_hud.open),
+    "STATS overlays compact R2 inventory")
+  return actual_stat_draw(self,...)
+ end
  safe_area=function()
   if override_safe then
    local landscape=w>h
