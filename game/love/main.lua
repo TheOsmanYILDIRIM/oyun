@@ -41,6 +41,7 @@ if r2_perf_overhaul and r2_pilot then
  r2_pilot.render_options.viewport_cull=true
  r2_pilot.render_options.indexed_mesh=true
  ObjectRenderer.viewport_cull=true
+ ObjectRenderer.static_order=true
 end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
   and require("tests.r2_pilot_smoke") or nil
@@ -401,11 +402,13 @@ function love.update(dt)
   local perf_begin=love.timer.getTime()
   if cache_pilot_enabled and not boot_ready then
     stats=stream:update(camera,w,h)
+    if r2_perf_overhaul then ObjectRenderer.prewarm(objects,stream,2) end
     local ready=stats.pending==0 and stats.loaded>0
     for _,c in ipairs(stream:visible()) do
       if not c._terrain_meshes then ready=false;break end
     end
     if ready then
+      if r2_perf_overhaul then ObjectRenderer.prepare(objects,stream) end
       boot_ready=true
       print(string.format("CHUNK_CACHE_GAME_READY ms=%.2f hits=%d misses=%d",
        (love.timer.getTime()-boot_started)*1000,
@@ -503,6 +506,7 @@ function love.update(dt)
   end
   if not debug_view then camera.x,camera.y=player.x,player.y end
   stats=stream:update(camera,w,h)
+  if r2_perf_overhaul then ObjectRenderer.prewarm(objects,stream,2) end
   if long_driver then long_driver:afterUpdate(stats) end
   if os.getenv("OSMAN_CHUNK_CACHE_BASELINE_SMOKE")=="1"
    or os.getenv("OSMAN_CHUNK_CACHE_SMOKE")=="1" then
