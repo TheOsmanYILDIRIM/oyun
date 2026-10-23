@@ -91,7 +91,11 @@ local stream=Stream.new(query,r2_pilot and
    prefetch_options=cache_pilot_enabled and {quality="standard"} or nil})
 -- The opt-in renderer must load every screen-overlapping chunk, even
 -- when a tall/mobile viewport needs more than 48 center-nearest chunks.
-if r2_perf_overhaul and r2_pilot then stream.viewport_cover=true end
+if r2_perf_overhaul and r2_pilot then
+ stream.viewport_cover=true
+ -- Low-priority CPU geometry prefetch must never consume movement frames.
+ stream.prefetch_idle_only=true
+end
 local long_mode=os.getenv("OSMAN_R2_LONG_TRAVERSAL")
 assert(not long_mode or
   (r2_pilot_enabled and not stage6_enabled and

@@ -101,6 +101,22 @@ function Stream:needed(camera,width,height)
   return candidates
 end
 
+-- Only schedule background, immutable cache prefetch after three consecutive
+-- still-camera updates in the experimental performance path. Any movement
+-- immediately suspends the worker without discarding incomplete cache data.
+-- Gameplay chunk generation/eviction/collision never depends on this flag.
+local function idle_prefetch_ready(stream,camera)
+ if not stream.prefetch_idle_only then return true end
+ local previous=stream._idle_prefetch_camera
+ local frames=stream._idle_prefetch_frames or 0
+ if previous and previous.x==camera.x and previous.y==camera.y then
+  frames=math.min(3,frames+1)
+ else frames=0 end
+ stream._idle_prefetch_camera={x=camera.x,y=camera.y}
+ stream._idle_prefetch_frames=frames
+ return frames>=3
+end
+
 function Stream:update(camera,width,height,budget)
   if self.cache and self.cache.poll then self.cache:poll() end
   budget=budget or self.build_budget
@@ -216,8 +232,9 @@ function Stream:update(camera,width,height,budget)
   -- Low-priority prefetch: builds complete CPU geometry for nearby unseen
   -- chunks, writes immutable cache files, and NEVER creates GPU resources.
   -- Do not compete with visibility or outstanding mesh creation.
+  local allow_prefetch=idle_prefetch_ready(self,camera)
   if self.cache and self.prefetch_options and clock
-    and #ordered==#candidates then
+    and allow_prefetch and #ordered==#candidates then
     local ready=true
     for _,chunk in ipairs(ordered) do
       if not chunk._terrain_meshes or chunk._cache_payload then
