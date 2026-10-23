@@ -140,6 +140,7 @@ jobs:
           python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/display-game" "$RUNNER_TEMP/display-report/Osman_R2_Display_Validated.love"
           python3 scripts/r2_display_matrix_instrument.py "$RUNNER_TEMP/display-game"
           luac5.4 -p "$RUNNER_TEMP/display-game/main.lua"
+          python3 -m py_compile scripts/r2_display_matrix_instrument.py scripts/r2_display_matrix_verify.py
       - name: Nine real LÖVE/Xvfb screen, aspect and zoom comparisons
         shell: bash
         run: |

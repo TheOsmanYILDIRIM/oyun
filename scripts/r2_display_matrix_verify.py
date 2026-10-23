@@ -38,8 +38,8 @@ for i,(w,h,z) in enumerate(cases,1):
    with Image.open(shot) as screenshot:
     screenshot.load()
     assert screenshot.size==(w,h)
-    assert max(ImageStat.Stat(screenshot.convert("RGB")).stddev)>5,
-      ("blank compact HUD frame",shot)
+    assert max(ImageStat.Stat(screenshot.convert("RGB")).stddev)>5, (
+      "blank compact HUD frame", str(shot))
   record={"case":i,"logical":[w,h],"zoom":z,"reported_dpi":float(row["dpi"]),
     "resident_chunks":int(row["loaded"]),"drawcalls":int(row["drawcalls"]),
     "pixel_equal":bbox is None,"diff_bbox":bbox}
