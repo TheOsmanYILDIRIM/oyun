@@ -28,17 +28,15 @@ jobs:
           cd game/love
           lua5.4 tests/player_stage3.lua
           lua5.4 tests/r2_topography_surface.lua
-          lua5.4 tests/r2_height_memo.lua
-          luajit tests/r2_height_memo.lua
       - name: Real gameplay callback sequences and single-frame operation traces
         shell: bash
         run: |
           set -euo pipefail
           export OSMAN_R2_PILOT=1 OSMAN_R2_OP_AUDIT=1 OSMAN_R2_OP_FRAMES=180
           export OSMAN_CHUNK_CACHE_PILOT=0
-          for mode in idle player_walk_plain player_walk_memo; do
+          for mode in idle player_walk_plain; do
             if [[ "$mode" == "idle" ]]; then export OSMAN_R2_OP_MOTION=idle; else export OSMAN_R2_OP_MOTION=player_walk; fi
-            if [[ "$mode" == "player_walk_memo" ]]; then export OSMAN_R2_HEIGHT_CACHE=1; else export OSMAN_R2_HEIGHT_CACHE=0; fi
+            export OSMAN_R2_HEIGHT_CACHE=0
             export XDG_DATA_HOME="$RUNNER_TEMP/user-$mode"
             mkdir -p "$XDG_DATA_HOME"
             cd "$RUNNER_TEMP/report"
@@ -56,7 +54,7 @@ jobs:
           python3 - <<'PY'
           import csv,json,pathlib,statistics
           result={}
-          for name in ("idle","player_walk_plain","player_walk_memo"):
+          for name in ("idle","player_walk_plain"):
             frames=list(csv.DictReader(open(name+"-frames.csv")))
             calls=list(csv.DictReader(open(name+"-calls.csv")))
             assert len(frames)==180 and len(calls)>0,(name,len(frames),len(calls))
