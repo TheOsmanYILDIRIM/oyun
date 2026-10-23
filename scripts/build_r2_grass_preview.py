@@ -70,6 +70,15 @@ assert s.count(needle)==1
 setup='''local active_texture=options.grass_preview~=false
  local shader
  local texture_pair={}
+ -- Reuse per-mesh first image and per-material shader second image.
+ -- A weak-key table prevents holding released LÖVE meshes after eviction.
+ local fast_binding=options.grass_binding_cache==true
+ if not Terrain._grass_bound_meshes then
+  Terrain._grass_bound_meshes=setmetatable({},{__mode="k"})
+ end
+ local bound=Terrain._grass_bound_meshes
+ local last_uniform=nil
+ local shader_active=false
  if active_texture then
   if not Terrain._grass_shader then
    Terrain._grass_shader=lg.newShader([[
@@ -107,15 +116,24 @@ needle2='''if drawables[name] then
     material_calls=material_calls+1
    end'''
 repl='''if drawables and drawables[name] then
+    local mesh=drawables[name]
     local pair=texture_pair[name]
     if pair then
-     drawables[name]:setTexture(pair[1])
-     shader:send("secondGrass",pair[2])
-     lg.setShader(shader)
+     if not fast_binding or bound[mesh]~=pair[1] then
+      mesh:setTexture(pair[1])
+      if fast_binding then bound[mesh]=pair[1] end
+     end
+     if not fast_binding or last_uniform~=pair[2] then
+      shader:send("secondGrass",pair[2])
+      last_uniform=pair[2]
+     end
+     if not fast_binding or not shader_active then lg.setShader(shader) end
+     shader_active=true
     else
-     lg.setShader()
+     if not fast_binding or shader_active then lg.setShader() end
+     shader_active=false
     end
-    lg.draw(drawables[name])
+    lg.draw(mesh)
     material_calls=material_calls+1
    end'''
 assert s.count(needle2)==1

@@ -42,6 +42,7 @@ if os.getenv("OSMAN_R2_DISPLAY_MATRIX")=="1" then
  end
  local function variant(enabled)
   r2_pilot.render_options.viewport_cull=enabled
+  r2_pilot.render_options.grass_binding_cache=enabled
   ObjectRenderer.viewport_cull=enabled
   ObjectRenderer.order_cull=enabled
  end

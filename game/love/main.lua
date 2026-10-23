@@ -40,6 +40,7 @@ local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")=="1"
 if r2_perf_overhaul and r2_pilot then
  r2_pilot.render_options.viewport_cull=true
  r2_pilot.render_options.indexed_mesh=true
+ r2_pilot.render_options.grass_binding_cache=true
  ObjectRenderer.viewport_cull=true
  ObjectRenderer.order_cull=true
  ObjectRenderer.pick_x_cull=true
