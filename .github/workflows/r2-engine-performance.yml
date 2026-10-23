@@ -1,3 +1,5 @@
+# Independent repetition of unchanged game/build code after 94c5dc7d.
+# This comment only changes workflow SHA, not the benchmark/renderer binaries.
 name: R2 engine performance A/B on real LÖVE
 on:
   push:
