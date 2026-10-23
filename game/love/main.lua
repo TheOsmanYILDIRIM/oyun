@@ -42,6 +42,7 @@ if r2_perf_overhaul and r2_pilot then
  r2_pilot.render_options.indexed_mesh=true
  ObjectRenderer.viewport_cull=true
  ObjectRenderer.order_cull=true
+ ObjectRenderer.static_order=true
 end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
   and require("tests.r2_pilot_smoke") or nil
@@ -414,6 +415,7 @@ function love.update(dt)
       if not c._terrain_meshes then ready=false;break end
     end
     if ready then
+      if r2_perf_overhaul then ObjectRenderer.prepare(objects,stream) end
       boot_ready=true
       print(string.format("CHUNK_CACHE_GAME_READY ms=%.2f hits=%d misses=%d",
        (love.timer.getTime()-boot_started)*1000,
