@@ -312,7 +312,8 @@ local function overlaps_screen(chunk,camera,width,height,height_scale)
  local z=camera.zoom
  local edge=chunk.size*math.sqrt(.5)*z
  local sx,sy=width*.5+x*z,height*.5+y*z
- local pad=(16+32*height_scale)*z+16
+ -- Generous relief allowance: no authored surface silhouette should clip.
+ local pad=(96+128*height_scale)*z+16
  return sx+edge>=-pad and sx-edge<=width+pad
     and sy+edge>=-pad and sy<=height+pad
 end

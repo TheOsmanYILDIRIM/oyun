@@ -101,7 +101,11 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
   end
   local start=clock()
   -- Fixed simulation dt to keep gameplay distance comparable among modes.
-  old_update(math.min(dt,1/60))
+  if os.getenv("OSMAN_R2_PROFILE_FIXED_STEP")=="1" then
+   old_update(1/60)
+  else
+   old_update(math.min(dt,1/60))
+  end
   update_ms=(clock()-start)*1000
  end
  function love.draw()
@@ -131,6 +135,13 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
      metric(cm,"hits"),metric(cm,"misses"),metric(cm,"invalid"),
      metric(cm,"writes"),collectgarbage("count"),draw.drawcalls or 0,
      tex/1048576,player.x,player.y))
+   if os.getenv("OSMAN_R2_ENGINE_LAB")=="1" and
+       (measured==math.floor(run_frames/2) or measured==run_frames-10) then
+    local frame_name=string.format("r2-engine-%s-%03d.png",mode,measured)
+    love.graphics.captureScreenshot(function(image)
+      image:encode("png",frame_name)
+    end)
+   end
    if measured>=run_frames then
     if joystick_down then
      local bx,by=joystick_center()

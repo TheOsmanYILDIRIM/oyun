@@ -11,6 +11,12 @@ end
 local function object_sprite(g,camera,w,h,o,selected)
   local x,y=camera:project(o.x,o.y,w,h)
   local z=camera.zoom
+  if R.viewport_cull then
+   -- Includes tree canopy, shadow, rock silhouette and selection outline.
+   local extent=math.max(30,o.radius*1.5+3)*z+8
+   if x+extent<0 or x-extent>w or y+math.max(8,o.radius)*z+8<0
+     or y-84*z-8>h then return end
+  end
   g.setColor(0,.09,.08,.33)
   g.ellipse("fill",x,y+3*z,o.radius*z*1.25,o.radius*z*.60)
   if o.kind=="tree" then

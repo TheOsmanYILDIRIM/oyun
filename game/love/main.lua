@@ -35,6 +35,12 @@ assert(not (cache_pilot_enabled and stage6_enabled),
 assert(not (r2_pilot_enabled and (stage6_enabled or stage6_create or stage6_reopen_smoke)),
   "R2 pilot is session-only; Stage6 save/create/reopen flags are forbidden")
 local r2_pilot=r2_pilot_enabled and require("world.r2_playable").new() or nil
+-- Explicit experimental render-only path; unchanged production behavior.
+local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")=="1"
+if r2_perf_overhaul and r2_pilot then
+ r2_pilot.render_options.viewport_cull=true
+ ObjectRenderer.viewport_cull=true
+end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
   and require("tests.r2_pilot_smoke") or nil
 local stage6_session,stage6_bridge,stage6_domain
