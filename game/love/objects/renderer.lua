@@ -95,79 +95,11 @@ function R.collect(world,stream)
   end
   return list
 end
--- Warm two unseen resident chunks during update rather than performing all
--- immutable Generator-v1 object queries in the first gameplay draw.
-function R.prewarm(world,stream,limit)
- if not (world.generator_version==1 and type(world.is_depleted)=="function") then
-  return 0
- end
- local todo={}
- for _,chunk in ipairs(stream:visible()) do
-  if chunk._object_render_world~=world or not chunk._object_render_candidates then
-   todo[#todo+1]=chunk
-   if #todo>=(limit or 2) then break end
-  end
- end
- if #todo>0 then R.collect(world,{visible=function() return todo end}) end
- return #todo
-end
-
--- World/positions are immutable only for generator v1; cache depth order of
--- candidates, never mutable depletion or player position. Rebuild on any
--- resident chunk identity or object-world identity change.
-function R.prepare(world,stream)
- assert(world.generator_version==1 and type(world.is_depleted)=="function",
-  "static depth order requires immutable Generator v1")
- local chunks=stream:visible()
- local cached=R._static_render
- if cached and cached.world==world and #cached.chunks==#chunks then
-  local same=true
-  for i=1,#chunks do
-   if cached.chunks[i]~=chunks[i] then same=false;break end
-  end
-  if same then return cached.ordered end
- end
- R.collect(world,stream) -- Populate cold immutable memberships only.
- local seen,ordered={},{}
- for _,chunk in ipairs(chunks) do
-  for _,o in ipairs(chunk._object_render_candidates) do
-   if o.cx==chunk.cx and o.cy==chunk.cy and not seen[o.id] then
-    seen[o.id]=true
-    ordered[#ordered+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o}
-   end
-  end
- end
- table.sort(ordered,Depth.before)
- local snapshot={}
- for i=1,#chunks do snapshot[i]=chunks[i] end
- R._static_render={world=world,chunks=snapshot,ordered=ordered}
- R.metrics.order_rebuilds=(R.metrics.order_rebuilds or 0)+1
- return ordered
-end
-
 function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
-  local static=R.static_order and world.generator_version==1 and
-    type(world.is_depleted)=="function"
-  local all,order
-  local avatar={id="!player",depth=Depth.key(player.x,player.y),player=true}
-  if static then
-   order={}
-   local inserted=false
-   for _,entry in ipairs(R.prepare(world,stream)) do
-    if not inserted and Depth.before(avatar,entry) then
-     order[#order+1]=avatar;inserted=true
-    end
-    order[#order+1]=entry
-   end
-   if not inserted then order[#order+1]=avatar end
-  else
-   all=R.collect(world,stream)
-   order={avatar}
-   for _,o in ipairs(all) do
-    order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o}
-   end
-   table.sort(order,Depth.before)
-  end
+  local all=R.collect(world,stream)
+  local order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}
+  for _,o in ipairs(all) do order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o} end
+  table.sort(order,Depth.before)
   local g=love.graphics
   g.push("all")
   -- Harvest tools are autonomous plasma-controlled objects, not rigged limbs.
@@ -180,13 +112,9 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
       visual.tool_seconds=harvesting.active.elapsed
     end
   end
-  local active=0
   for _,entry in ipairs(order) do
     if entry.player then player_sprite(g,camera,w,h,player,visual)
-    elseif not static or not world:is_depleted(entry.id) then
-     object_sprite(g,camera,w,h,entry.object,entry.id==selected_id)
-     active=active+1
-    end
+    else object_sprite(g,camera,w,h,entry.object,entry.id==selected_id) end
   end
   -- Visual-only strike on actual tree harvest; never changes inventory or collision.
   if harvesting and harvesting.active then
@@ -202,7 +130,7 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
     end
   end
   g.pop()
-  return static and active or #all
+  return #all
 end
 function R.pick(world,stream,camera,w,h,sx,sy)
   local closest,best=nil,math.huge
