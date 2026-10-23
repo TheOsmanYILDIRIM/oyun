@@ -275,6 +275,20 @@ function love.load()
     if tonumber(vw)==320 then love.graphics.setNewFont(16) end
   end
   w,h=love.graphics.getDimensions()
+  if r2_perf_overhaul and r2_pilot then
+    -- R2 route/status strings previously forced first-use font texture
+    -- uploads (~24ms) during joystick/tap frames 99/102. Build the glyphs
+    -- once at boot, on the actual current font, then release the Text
+    -- object. No changes to HUD text, shader, materials, geometry or saves.
+    local lg=love.graphics
+    local warm=lg.newText(lg.getFont(),
+      "Finding route... Navigating No path: blocked No approach route "..
+      "Approaching resource Gathering Move closer to a resource "..
+      "R2 building unavailable: no approved build zones "..
+      "Stat allocated (session only) Collected")
+    warm:release()
+    print("R2_FONT_PREWARM_DONE")
+  end
   progression=CharacterProgression.new({
     player_id="player:local",
     core_instance_id=Uuid.new(love.math.random),
