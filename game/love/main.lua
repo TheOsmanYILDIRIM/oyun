@@ -86,6 +86,9 @@ local stream=Stream.new(query,r2_pilot and
    prefetch_options=cache_pilot_enabled and r2_pilot.render_options or nil} or
   {size=256,step=32,max_loaded=100,build_budget=5,cache=chunk_cache,
    prefetch_options=cache_pilot_enabled and {quality="standard"} or nil})
+-- The opt-in renderer must load every screen-overlapping chunk, even
+-- when a tall/mobile viewport needs more than 48 center-nearest chunks.
+if r2_perf_overhaul and r2_pilot then stream.viewport_cover=true end
 local long_mode=os.getenv("OSMAN_R2_LONG_TRAVERSAL")
 assert(not long_mode or
   (r2_pilot_enabled and not stage6_enabled and

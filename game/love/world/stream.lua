@@ -78,7 +78,7 @@ function Stream:needed(camera,width,height)
     -- to the historical 48-nearest-centres cap. Noncritical halo is capped.
     -- This may require >48 chunks at extreme zoom-out: monitor memory.
     local required,halo={},{}
-    local pad=120*camera.zoom+16
+    local pad=160*camera.zoom+16
     for _,c in ipairs(candidates) do
       if overlaps_view(c.cx,c.cy,size,camera,width,height,pad) then
         required[#required+1]=c

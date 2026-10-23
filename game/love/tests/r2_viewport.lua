@@ -46,6 +46,37 @@ for _,dims in ipairs({{720,1600},{691,1536},{360,780}}) do
     w,h,needed,lost_old,#covered))
   world.viewport_cover=nil
 end
+-- Matrix of portrait, wide, zoom-out and deep zoom. No mesh or
+-- material mutation: assert conservative coverage in world/screen space.
+for _,v in ipairs({
+ {320,700,.65},{360,780,1.7},{392,850,1.7},{411,891,1.7},
+ {691,1536,1.7},{720,1600,1.7},{1280,800,1.7},
+ {360,780,3.2},{720,1600,.65}
+}) do
+ local width,height,zoom=v[1],v[2],v[3]
+ for _,pt in ipairs({{64,128},{-200,420},{704,128}}) do
+  cam.x,cam.y,cam.zoom=pt[1],pt[2],zoom
+  world.viewport_cover=true
+  local have=world:needed(cam,width,height)
+  local present={}
+  for _,chunk in ipairs(have) do present[chunk.key]=true end
+  local count,pad=0,160*zoom+16
+  for cy=-30,30 do for cx=-30,30 do
+   local k=cx..":"..cy
+   if overlaps({cx=cx,cy=cy},width,height,pad) then
+    count=count+1
+    assert(present[k],string.format("missing screen chunk %s %dx%d zoom %.2f",
+      k,width,height,zoom))
+   end
+  end end
+  assert(#have>=count,"visible chunk budget truncated")
+  print(string.format("R2_DISPLAY_COVER_OK %dx%d zoom=%.2f screen=%d resident=%d",
+    width,height,zoom,count,#have))
+ end
+end
+world.viewport_cover=nil
+cam.x,cam.y,cam.zoom=64,128,1.7
+
 -- Default Stream:needed ordering and cap remain unchanged when opt-in is off.
 assert(#world:needed(cam,720,1600)==48)
 print("R2_VIEWPORT_RENDER_ONLY_TEST_OK")
