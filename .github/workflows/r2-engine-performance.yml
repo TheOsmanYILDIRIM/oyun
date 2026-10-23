@@ -117,6 +117,15 @@ jobs:
             pair["accept_p95_below_16_7"]=improved["p95"]<16.7
             pair["accept_p99_below_25"]=improved["p99"]<25
             out["pairs"].append(pair)
+          for trial in (1,2):
+            for variant in ("baseline","optimized"):
+              x=out["trials"][f"{variant}_walk_{trial}"]
+              print("R2_PHASE_METRICS",variant,"trial",trial,
+                "needed_p95",x["needed_ms"]["p95"],
+                "material_p95",x["material_ms"]["p95"],
+                "stream_p95",x["stream_ms"]["p95"],
+                "terrain_p95",x["terrain_ms"]["p95"],
+                "draws_p95",x["material_draws"]["p95"])
           pathlib.Path("R2_ENGINE_AB.json").write_text(json.dumps(out,indent=2))
           rows=["# R2 engine A/B (real LÖVE/Xvfb Linux proxy)","", "Benchmark-only deterministic A* scheduler: 2 real collision checkpoints per frame, no wall-clock cutoff. Production A* is untouched; not Android/GPU-present evidence.", "", "|Trial|p95 base → optimized ms|p99 base → optimized ms|Gain p95/p99|Max position delta|Identical PNG|", "|---|---|---|---|---|---|"]
           for pair in out["pairs"]:

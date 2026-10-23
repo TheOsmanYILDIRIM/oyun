@@ -100,6 +100,30 @@ end
 world.fast_cover_candidates=nil;world.viewport_cover=nil
 cam.x,cam.y,cam.zoom=64,128,1.7
 print("R2_FAST_COVER_ORDER_PARITY_OK cases=150")
+-- Per-process comparison removes most variability from separately
+-- scheduled GitHub runners. These times are pure Lua candidate selection only.
+local t_old,t_fast=0,0
+for _,dims in ipairs({{360,780,.65},{720,1600,1.7},{1280,800,1.7}}) do
+ local w,h,z=dims[1],dims[2],dims[3]
+ cam.zoom=z;world.viewport_cover=true
+ for n=1,120 do
+  cam.x=64+n*.61;cam.y=128+n*.27
+  world.fast_cover_candidates=false
+  local t=os.clock()
+  local reference=world:needed(cam,w,h)
+  t_old=t_old+(os.clock()-t)
+  world.fast_cover_candidates=true
+  t=os.clock()
+  local fast=world:needed(cam,w,h)
+  t_fast=t_fast+(os.clock()-t)
+  assert(#reference==#fast)
+  for i=1,#fast do assert(reference[i].key==fast[i].key) end
+ end
+end
+world.fast_cover_candidates=nil;world.viewport_cover=nil
+cam.x,cam.y,cam.zoom=64,128,1.7
+print(string.format("R2_SORT_MICRO old_ms=%.3f fast_ms=%.3f gain=%.2f%%",
+ t_old*1000,t_fast*1000,100*(1-t_fast/t_old)))
 -- Default Stream:needed ordering and cap remain unchanged when opt-in is off.
 assert(#world:needed(cam,720,1600)==48)
 print("R2_VIEWPORT_RENDER_ONLY_TEST_OK")
