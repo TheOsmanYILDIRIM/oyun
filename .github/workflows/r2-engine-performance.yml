@@ -14,6 +14,8 @@ on:
       - game/love/tests/r2_object_screen_x.lua
       - scripts/r2_profile_instrument.py
       - scripts/build_r2_grass_preview.py
+      - scripts/r2_display_matrix_instrument.py
+      - scripts/r2_display_matrix_verify.py
       - .github/workflows/r2-engine-performance.yml
   workflow_dispatch:
 jobs:
@@ -116,4 +118,42 @@ jobs:
         with:
           name: Osman-R2-Engine-Performance-AB
           path: ${{ runner.temp }}/report/
+          if-no-files-found: warn
+
+  display:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install real LÖVE display runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y love xvfb lua5.4 luajit python3-pil
+      - name: Build unchanged playable R2 package and instrument temporary game
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/display-report"
+          python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/display-game" "$RUNNER_TEMP/display-report/Osman_R2_Display_Validated.love"
+          python3 scripts/r2_display_matrix_instrument.py "$RUNNER_TEMP/display-game"
+          luac5.4 -p "$RUNNER_TEMP/display-game/main.lua"
+      - name: Nine real LÖVE/Xvfb screen, aspect and zoom comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/display-report"
+          export XDG_DATA_HOME="$RUNNER_TEMP/r2-display-user"
+          mkdir -p "$XDG_DATA_HOME"
+          export OSMAN_R2_PILOT=1 OSMAN_CHUNK_CACHE_PILOT=1
+          export OSMAN_R2_PERF_OVERHAUL=1 OSMAN_R2_DISPLAY_MATRIX=1
+          timeout 1900s xvfb-run -a -s '-screen 0 1600x2400x24' love "$RUNNER_TEMP/display-game" 2>&1 | tee display.log
+          grep -q "R2_DISPLAY_MATRIX_DONE cases=9" display.log
+          find "$XDG_DATA_HOME" -type f -name 'matrix-*.png' -exec cp {} . \;
+          python3 "$GITHUB_WORKSPACE/scripts/r2_display_matrix_verify.py" .
+      - name: Upload original playable package and viewport screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osman-R2-Multi-Display-Visual-Proof
+          path: ${{ runner.temp }}/display-report/
           if-no-files-found: warn
