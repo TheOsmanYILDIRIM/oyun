@@ -23,8 +23,22 @@ local function vertex(out,x,y,biome,opts,alpha)
  local id=x..":"..y
  local geo=opts._geo[id]
  if not geo then
-  local sx,sy=projection(x,y,opts.topography,opts.height_scale)
-  geo={sx,sy,light(opts.topography,x,y)}
+  local topo=opts.topography
+  local sx,sy,shade
+  if topo then
+   -- A single topography sample contains height AND the exact slope gradients.
+   -- Avoid calculating height(x,y) again in projection for the same vertex.
+   local sample=topo:sample(x,y)
+   assert(type(sample)=="table" and finite(sample.height) and
+     finite(sample.gradient_x) and finite(sample.gradient_y),
+     "invalid R2 topography sample")
+   sx,sy=Iso.project(x,y,sample.height*opts.height_scale)
+   shade=Materials.light(sample.gradient_x,sample.gradient_y)
+  else
+   sx,sy=Iso.project(x,y,0)
+   shade=1
+  end
+  geo={sx,sy,shade}
   opts._geo[id]=geo
  end
  local color=biome=="water" and water or Materials.color(biome,x,y)
