@@ -42,6 +42,7 @@ if os.getenv("OSMAN_R2_OP_AUDIT")=="1" then
  for _,k in ipairs({"sample","surface_at","get_height","get_biome"}) do wrap(source_query,k,"worldquery."..k) end
  local topo=r2_pilot and r2_pilot.topography
  for _,k in ipairs({"sample","height","colliders","prewarm_colliders"}) do wrap(topo,k,"topography."..k) end
+ wrap(topo,"height_at","topography.raw_height_at")
  for _,k in ipairs({"objects_in","obstacles","get","is_depleted"}) do wrap(objects,k,"objects."..k) end
  wrap(ObjectRenderer,"collect","object_renderer.collect")
  wrap(ObjectRenderer,"draw","object_renderer.draw")
