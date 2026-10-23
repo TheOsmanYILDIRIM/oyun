@@ -1,5 +1,6 @@
 -- Sorted 45-degree world-foot sprites; GPU-independent placement and mutable state.
 local Depth=require("player.depth")
+local Iso=require("world.iso")
 local R={metrics={collect_calls=0,cold_queries=0,cold_query_ms=0,
  cold_query_max_ms=0,collect_last_ms=0,collect_max_ms=0}}
 local CoreVisual=require("player.core_visual")
@@ -129,7 +130,22 @@ end
 function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   local all=R.collect(world,stream)
   local order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}
-  for _,o in ipairs(all) do order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o} end
+  for _,o in ipairs(all) do
+    -- Camera.mount changes only screen Y for terrain elevation. Screen X
+    -- from the exact same Iso.project transform is independent of relief.
+    -- Exclude only objects wholly outside screen X *before* depth sorting,
+    -- projection/topography samples and GPU primitives.
+    local keep=true
+    if R.viewport_cull and R.order_cull then
+      local projected_x=Iso.project(o.x-camera.x,o.y-camera.y)
+      local x=w*.5+projected_x*camera.zoom
+      local extent=math.max(30,o.radius*1.5+3)*camera.zoom+9
+      keep=x+extent>=0 and x-extent<=w
+    end
+    if keep then
+      order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o}
+    end
+  end
   table.sort(order,Depth.before)
   local g=love.graphics
   g.push("all")
