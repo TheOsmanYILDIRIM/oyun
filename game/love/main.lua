@@ -43,6 +43,8 @@ if r2_perf_overhaul and r2_pilot then
  ObjectRenderer.viewport_cull=true
  ObjectRenderer.order_cull=true
  ObjectRenderer.pick_x_cull=true
+ ObjectRenderer.r2_static_topography=r2_pilot.topography
+ ObjectRenderer.r2_static_height_scale=r2_pilot.render_options.height_scale
 end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
   and require("tests.r2_pilot_smoke") or nil

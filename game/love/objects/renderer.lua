@@ -8,11 +8,26 @@ local R={metrics={collect_calls=0,cold_queries=0,cold_query_ms=0,
 local CoreVisual=require("player.core_visual")
 local AxeStrike=require("player.axe_strike")
 local axe_image=nil
+local foot_heights=setmetatable({},{__mode="k"})
+local function foot_project(camera,w,h,o)
+ local topo=R.r2_static_topography
+ if not topo then return camera:project(o.x,o.y,w,h) end
+ local value=foot_heights[o]
+ if value==nil then
+  value=topo:height(o.x,o.y);foot_heights[o]=value
+  R.metrics.foot_misses=(R.metrics.foot_misses or 0)+1
+ else
+  R.metrics.foot_hits=(R.metrics.foot_hits or 0)+1
+ end
+ local x,y=Iso.project(o.x-camera.x,o.y-camera.y)
+ return w/2+x*camera.zoom,h/2+y*camera.zoom-
+   value*assert(R.r2_static_height_scale)*camera.zoom
+end
 local function player_sprite(g,camera,w,h,player,visual_context)
   return CoreVisual.draw(g,camera,w,h,player,visual_context)
 end
 local function object_sprite(g,camera,w,h,o,selected)
-  local x,y=camera:project(o.x,o.y,w,h)
+  local x,y=foot_project(camera,w,h,o)
   local z=camera.zoom
   if R.viewport_cull then
    -- Includes tree canopy, shadow, rock silhouette and selection outline.
