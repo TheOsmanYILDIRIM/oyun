@@ -31,7 +31,9 @@ for a,b in [
  ('local r2_pilot_enabled=os.getenv("OSMAN_R2_PILOT")=="1"',
   'local r2_pilot_enabled=os.getenv("OSMAN_R2_PILOT")~="0"'),
  ('local cache_pilot_enabled=os.getenv("OSMAN_CHUNK_CACHE_PILOT")=="1"',
-  'local cache_pilot_enabled=os.getenv("OSMAN_CHUNK_CACHE_PILOT")~="0"')
+  'local cache_pilot_enabled=os.getenv("OSMAN_CHUNK_CACHE_PILOT")~="0"'),
+ ('local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")=="1"',
+  'local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")~="0"')
 ]:
  assert s.count(a)==1,a
  s=s.replace(a,b)
@@ -127,7 +129,9 @@ s=s.replace(needle3,'''lg.setShader()
 renderer.write_text(s)
 (root/"PREVIEW_GRASS_README.txt").write_text(
 "Osman R2 grass full playable preview. Original save and texture assets unchanged. "
-"R2 and optional disposable terrain cache enabled in this package. "
+"R2, disposable terrain cache, and validated experimental R2 performance path "
+"enabled by default in this portable package (set OSMAN_R2_PERF_OVERHAUL=0 "
+"to compare baseline). The checked-out main.lua still defaults opt-out. "
 "Six 512px downsized preview textures; originals remain in GitHub. "
 "No official Android FPS proof. LÖVE 11.x.\n")
 out.parent.mkdir(parents=True,exist_ok=True)
