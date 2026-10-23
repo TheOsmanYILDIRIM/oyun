@@ -73,6 +73,8 @@ inventory=Inventory.new(12)
 crafting=Craft.new(inventory)
 harvesting=Harvest.new(objects,38,inventory)
 local stage_hud=StageHUD.new()
+-- R2-only compact HUD: leave historical Stage5/save layouts untouched.
+stage_hud.compact_layout=r2_perf_overhaul and r2_pilot~=nil
 local stat_hud=StatHud.new()
 local progression -- Session-only until a versioned Stage6 migration is approved.
 local placement_target=nil
@@ -193,7 +195,9 @@ local function place_workbench()
   return result
 end
 local function hud_action(id)
-  if id=="inventory" then stage_hud.open=not stage_hud.open
+  if id=="hud_page:items" then stage_hud.page=1
+  elseif id=="hud_page:actions" then stage_hud.page=2
+  elseif id=="inventory" then stage_hud.open=not stage_hud.open
   elseif id=="build" then
     if inventory:count("core:workbench")<1 then route_status="Craft a bench first"
     else stage_hud.placing=true;stage_hud.open=false
@@ -586,9 +590,11 @@ function love.draw()
   stat_hud:draw(g,hud_safe,progression)
   local bx,by=joystick_center()
   g.setColor(.2,.3,.34,.6)
-  g.circle("fill",bx,by,72)
-  g.setColor(.95,.95,.9,.7)
-  g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
+  if not (stage_hud.compact_layout and stage_hud.open and safe_h<680) then
+    g.circle("fill",bx,by,72)
+    g.setColor(.95,.95,.9,.7)
+    g.circle("fill",bx+joystick.dx*55,by+joystick.dy*55,22)
+  end
   g.setColor(1,1,1)
   frames=frames+1
   if cache_pilot_enabled and os.getenv("OSMAN_CHUNK_CACHE_PREFETCH_SMOKE")=="1"
