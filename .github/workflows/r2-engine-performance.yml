@@ -10,7 +10,6 @@ on:
       - game/love/tests/r2_indexed_geometry.lua
       - game/love/tests/r2_object_boot_prewarm.lua
       - game/love/tests/r2_object_screen_x.lua
-      - game/love/tests/r2_static_object_order.lua
       - scripts/r2_profile_instrument.py
       - scripts/build_r2_grass_preview.py
       - .github/workflows/r2-engine-performance.yml
@@ -34,7 +33,7 @@ jobs:
           python3 scripts/r2_profile_instrument.py "$RUNNER_TEMP/game"
           grep -q 'local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")~="0"' "$RUNNER_TEMP/game/main.lua"
           luac5.4 -p "$RUNNER_TEMP/game/main.lua" "$RUNNER_TEMP/game/world/terrain_renderer.lua" "$RUNNER_TEMP/game/objects/renderer.lua"
-          (cd game/love && for lua in lua5.4 luajit; do "$lua" tests/r2_viewport.lua; "$lua" tests/r2_cpu_cache_regression.lua; "$lua" tests/r2_indexed_geometry.lua; "$lua" tests/r2_object_boot_prewarm.lua; "$lua" tests/r2_object_screen_x.lua; "$lua" tests/r2_static_object_order.lua; done)
+          (cd game/love && for lua in lua5.4 luajit; do "$lua" tests/r2_viewport.lua; "$lua" tests/r2_cpu_cache_regression.lua; "$lua" tests/r2_indexed_geometry.lua; "$lua" tests/r2_object_boot_prewarm.lua; "$lua" tests/r2_object_screen_x.lua; done)
           sha256sum "$RUNNER_TEMP/report/Osman_R2_Engine_Performance.love" > "$RUNNER_TEMP/report/LOVE_SHA256.txt"
           lscpu > "$RUNNER_TEMP/report/CI_CPU.txt"
       - name: Paired fixed-step touch and joystick routes (two trials)

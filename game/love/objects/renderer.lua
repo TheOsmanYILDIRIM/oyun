@@ -127,49 +127,14 @@ function R.prewarm(world,stream,limit)
  return #pending,true
 end
 
--- Position and depth are immutable for R2 Generator v1 candidates. A
--- resident-chunk snapshot owns only sorted render references; membership and
--- depletion/renewal remain authoritative and are checked live every draw.
-function R.prepare(world,stream)
- assert(world.generator_version==1 and type(world.is_depleted)=="function",
-   "static R2 sorting requires immutable Generator v1")
- local chunks=stream:visible()
- local prev=R._sorted_render
- if prev and prev.world==world and #prev.chunks==#chunks then
-  local stable=true
-  for i=1,#chunks do
-   if prev.chunks[i]~=chunks[i] then stable=false;break end
-  end
-  if stable then return prev.order end
- end
- local seen,order={},{}
- for _,chunk in ipairs(chunks) do
-  assert(chunk._object_render_world==world and
-      type(chunk._object_render_candidates)=="table",
-      "sort after candidates are prepared")
-  for _,o in ipairs(chunk._object_render_candidates) do
-   if o.cx==chunk.cx and o.cy==chunk.cy and not seen[o.id] then
-    seen[o.id]=true
-    order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o}
-   end
-  end
- end
- table.sort(order,Depth.before)
- local snapshot={}
- for i=1,#chunks do snapshot[i]=chunks[i] end
- R._sorted_render={world=world,chunks=snapshot,order=order}
- R.metrics.static_order_builds=(R.metrics.static_order_builds or 0)+1
- return order
-end
-
 function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   local all=R.collect(world,stream)
-  local use_static=R.static_order and R.order_cull and
-    world.generator_version==1 and type(world.is_depleted)=="function"
-  local order
-  if not use_static then
-   order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}
-   for _,o in ipairs(all) do
+  local order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}
+  for _,o in ipairs(all) do
+    -- Camera.mount changes only screen Y for terrain elevation. Screen X
+    -- from the exact same Iso.project transform is independent of relief.
+    -- Exclude only objects wholly outside screen X *before* depth sorting,
+    -- projection/topography samples and GPU primitives.
     local keep=true
     if R.viewport_cull and R.order_cull then
       local projected_x=Iso.project(o.x-camera.x,o.y-camera.y)
@@ -180,9 +145,8 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
     if keep then
       order[#order+1]={id=o.id,depth=Depth.key(o.x,o.y),object=o}
     end
-   end
-   table.sort(order,Depth.before)
   end
+  table.sort(order,Depth.before)
   local g=love.graphics
   g.push("all")
   -- Harvest tools are autonomous plasma-controlled objects, not rigged limbs.
@@ -195,29 +159,9 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
       visual.tool_seconds=harvesting.active.elapsed
     end
   end
-  if use_static then
-   local avatar={id="!player",depth=Depth.key(player.x,player.y),player=true}
-   local inserted=false
-   for _,entry in ipairs(R.prepare(world,stream)) do
-    if not world:is_depleted(entry.id) then
-     local o=entry.object
-     local sx=w*.5+Iso.project(o.x-camera.x,o.y-camera.y)*camera.zoom
-     local margin=math.max(30,o.radius*1.5+3)*camera.zoom+9
-     if sx+margin>=0 and sx-margin<=w then
-      if not inserted and Depth.before(avatar,entry) then
-       player_sprite(g,camera,w,h,player,visual)
-       inserted=true
-      end
-      object_sprite(g,camera,w,h,o,entry.id==selected_id)
-     end
-    end
-   end
-   if not inserted then player_sprite(g,camera,w,h,player,visual) end
-  else
-   for _,entry in ipairs(order) do
+  for _,entry in ipairs(order) do
     if entry.player then player_sprite(g,camera,w,h,player,visual)
     else object_sprite(g,camera,w,h,entry.object,entry.id==selected_id) end
-   end
   end
   -- Visual-only strike on actual tree harvest; never changes inventory or collision.
   if harvesting and harvesting.active then
