@@ -66,7 +66,10 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local last_cold=0
  local last_cold_ms=0
  local function status()
-  local ready=stats and stats.loaded>0 and stats.pending==0
+  -- The active cache-loading game also waits for all immutable object
+  -- candidates. Never start measuring while the loading overlay is visible.
+  local ready=stats and stats.loaded>0 and stats.pending==0 and
+    (not cache_pilot_enabled or boot_ready)
   if ready then
    for _,chunk in ipairs(stream:visible()) do
     if not chunk._terrain_meshes then return false end
