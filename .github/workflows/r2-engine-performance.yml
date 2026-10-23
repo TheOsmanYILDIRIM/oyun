@@ -8,7 +8,6 @@ on:
       - game/love/objects/renderer.lua
       - game/love/world/indexed_geometry.lua
       - game/love/tests/r2_indexed_geometry.lua
-      - game/love/tests/r2_object_prewarm.lua
       - scripts/r2_profile_instrument.py
       - .github/workflows/r2-engine-performance.yml
   workflow_dispatch:
@@ -30,7 +29,7 @@ jobs:
           python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/game" "$RUNNER_TEMP/report/Osman_R2_Engine_Performance.love"
           python3 scripts/r2_profile_instrument.py "$RUNNER_TEMP/game"
           luac5.4 -p "$RUNNER_TEMP/game/main.lua" "$RUNNER_TEMP/game/world/terrain_renderer.lua" "$RUNNER_TEMP/game/objects/renderer.lua"
-          (cd game/love && for lua in lua5.4 luajit; do "$lua" tests/r2_viewport.lua; "$lua" tests/r2_cpu_cache_regression.lua; "$lua" tests/r2_indexed_geometry.lua; "$lua" tests/r2_object_prewarm.lua; done)
+          (cd game/love && for lua in lua5.4 luajit; do "$lua" tests/r2_viewport.lua; "$lua" tests/r2_cpu_cache_regression.lua; "$lua" tests/r2_indexed_geometry.lua; done)
           sha256sum "$RUNNER_TEMP/report/Osman_R2_Engine_Performance.love" > "$RUNNER_TEMP/report/LOVE_SHA256.txt"
           lscpu > "$RUNNER_TEMP/report/CI_CPU.txt"
       - name: Paired fixed-step touch and joystick routes (two trials)
@@ -40,6 +39,7 @@ jobs:
           cd "$RUNNER_TEMP/report"
           export OSMAN_R2_PROFILE=1 OSMAN_R2_PILOT=1 OSMAN_CHUNK_CACHE_PILOT=1
           export OSMAN_PROFILE_TEXTURE=1 OSMAN_R2_PROFILE_FIXED_STEP=1 OSMAN_R2_ENGINE_LAB=1
+          export OSMAN_R2_NAV_FIXED_QUERY_BUDGET=1
           export OSMAN_R2_PROFILE_FRAMES=180 OSMAN_R2_PROFILE_BOOT_MAX=3200
           for trial in 1 2; do
             for variant in baseline optimized; do
@@ -63,7 +63,7 @@ jobs:
           python3 - <<'PY'
           import csv,json,math,pathlib
           from PIL import Image,ImageChops
-          out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU frame proxy; not Android/GPU present timing","trials":{},"pairs":[]}
+          out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU frame proxy; NAV staging worker fixed to 2 real collision checkpoints/frame; production wall-clock A* budget NOT used; not Android/GPU present timing","trials":{},"pairs":[]}
           keys=("elapsed_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
           def pct(a,q):
             a=sorted(a);return round(a[int((len(a)-1)*q)],3)
@@ -74,7 +74,8 @@ jobs:
               rows=list(csv.DictReader(open(f"r2-profile-{name}.csv")))
               assert len(rows)==180,(name,len(rows))
               routes[variant]=rows
-              out["trials"][name]={k:{"p50":pct([float(r[k]) for r in rows],.5),"p95":pct([float(r[k]) for r in rows],.95),"p99":pct([float(r[k]) for r in rows],.99)} for k in keys}
+              out["trials"][name]={k:{"p50":pct([float(r[k]) for r in rows],.5),"p95":pct([float(r[k]) for r in rows],.95),"p99":pct([float(r[k]) for r in rows],.99),"max":round(max(float(r[k]) for r in rows),3)} for k in keys}
+              out["trials"][name]["first_measured_frame"]={k:round(float(rows[0][k]),3) for k in ("elapsed_ms","objects_ms","object_cold_queries","object_cold_ms","drawcalls")}
             a,b=routes["baseline"],routes["optimized"]
             delta=max(math.hypot(float(x["x"])-float(y["x"]),float(x["y"])-float(y["y"])) for x,y in zip(a,b))
             pair={"trial":n,"route_max_delta":delta,"png":[]}
@@ -94,7 +95,7 @@ jobs:
             pair["accept_p99_below_25"]=improved["p99"]<25
             out["pairs"].append(pair)
           pathlib.Path("R2_ENGINE_AB.json").write_text(json.dumps(out,indent=2))
-          rows=["# R2 R2 engine A/B (real LÖVE/Xvfb Linux proxy)","", "Not an Android or GPU-present benchmark.", "", "|Trial|p95 base → optimized ms|p99 base → optimized ms|Gain p95/p99|Max position delta|Identical PNG|", "|---|---|---|---|---|---|"]
+          rows=["# R2 engine A/B (real LÖVE/Xvfb Linux proxy)","", "Benchmark-only deterministic A* scheduler: 2 real collision checkpoints per frame, no wall-clock cutoff. Production A* is untouched; not Android/GPU-present evidence.", "", "|Trial|p95 base → optimized ms|p99 base → optimized ms|Gain p95/p99|Max position delta|Identical PNG|", "|---|---|---|---|---|---|"]
           for pair in out["pairs"]:
             n=pair["trial"];a=out["trials"][f"baseline_walk_{n}"]["elapsed_ms"];b=out["trials"][f"optimized_walk_{n}"]["elapsed_ms"]
             rows.append(f'|{n}|{a["p95"]} → {b["p95"]}|{a["p99"]} → {b["p99"]}|{pair["p95_gain_percent"]}% / {pair["p99_gain_percent"]}%|{pair["route_max_delta"]:.3f}|{all(x["identical"] for x in pair["png"])}|')

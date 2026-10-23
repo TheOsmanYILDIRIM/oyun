@@ -12,6 +12,23 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local clock=love.timer.getTime
  local mode=assert(os.getenv("OSMAN_R2_PROFILE_MODE"),"profile mode")
  local motion=mode:find("walk",1,true)~=nil
+ -- Benchmark-only fixed query count for the *real* A* worker and CCD.
+ -- Normal production pathfinder remains untouched. Wall-time checkpoints
+ -- otherwise advance on different frames and invalidate paired routes.
+ if os.getenv("OSMAN_R2_NAV_FIXED_QUERY_BUDGET")=="1" then
+  local finder=require("navigation.pathfinder")
+  for _,name in ipairs({"begin","begin_any"}) do
+   local new_search=assert(finder[name])
+   finder[name]=function(...)
+    local job=new_search(...)
+    local original_step=assert(job.step)
+    function job:step(_ms,_queries)
+     return original_step(self,100000,2)
+    end
+    return job
+   end
+  end
+ end
  local run_frames=tonumber(os.getenv("OSMAN_R2_PROFILE_FRAMES")) or 240
  local hard_frames=tonumber(os.getenv("OSMAN_R2_PROFILE_BOOT_MAX")) or 1800
  local frame,measured,phase=0,0,"boot"
@@ -92,6 +109,11 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
   stream_ms,terrain_ms,objects_ms=0,0,0
   if phase=="boot" and status() then
    phase="measured";measured=0
+   -- Never charge boot-time object collection to the first measured frame.
+   local om=ObjectRenderer.metrics or {}
+   last_collect=metric(om,"collect_calls")
+   last_cold=metric(om,"cold_queries")
+   last_cold_ms=metric(om,"cold_query_ms")
    print("R2_PROFILE_READY mode="..mode.." boot_frames="..frame)
    io.stdout:flush()
   end

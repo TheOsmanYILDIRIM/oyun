@@ -95,27 +95,6 @@ function R.collect(world,stream)
   end
   return list
 end
--- R2 opt-in: transfer first-draw immutable object discovery into the
--- already existing world-loading/update cadence. Never changes depletion,
--- authored geometry, object IDs or persistent game state. Cap work per frame.
-function R.prewarm(world,stream,limit)
- if not (world.generator_version==1 and type(world.is_depleted)=="function") then
-  return 0
- end
- local pending={}
- for _,chunk in ipairs(stream:visible()) do
-  if chunk._object_render_world~=world or
-      not chunk._object_render_candidates then
-   pending[#pending+1]=chunk
-   if #pending>=(limit or 1) then break end
-  end
- end
- if #pending>0 then
-  R.collect(world,{visible=function() return pending end})
- end
- return #pending
-end
-
 function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   local all=R.collect(world,stream)
   local order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}
