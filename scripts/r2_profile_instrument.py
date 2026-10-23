@@ -39,7 +39,7 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local hard_frames=tonumber(os.getenv("OSMAN_R2_PROFILE_BOOT_MAX")) or 1800
  local frame,measured,phase=0,0,"boot"
  local csv=assert(io.open("r2-profile-"..mode..".csv","w"))
- csv:write("mode,phase,frame,elapsed_ms,update_ms,draw_ms,stream_ms,terrain_ms,objects_ms,loaded,needed,pending,mesh_ready,object_collect_calls,object_cold_queries,object_cold_ms,cache_hits,cache_misses,cache_invalid,cache_writes,lua_kib,drawcalls,texture_mb,x,y\n")
+ csv:write("mode,phase,frame,elapsed_ms,update_ms,draw_ms,stream_ms,terrain_ms,objects_ms,loaded,needed,pending,mesh_ready,object_collect_calls,object_cold_queries,object_cold_ms,cache_hits,cache_misses,cache_invalid,cache_writes,lua_kib,drawcalls,texture_mb,x,y,input_ms,pick_ms,pick_calls,pick_projected,pick_skipped,draw_other_ms\n")
  local function metric(m,k) return m and m[k] or 0 end
  local org_stream=stream.update
  local stream_ms,terrain_ms,objects_ms=0,0,0
@@ -65,7 +65,8 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  end
  local old_update=love.update
  local old_draw=love.draw
- local update_ms,draw_ms=0,0
+ local update_ms,draw_ms,input_ms=0,0,0
+ local last_pick_ms,last_pick_calls,last_projected,last_skipped=0,0,0,0
  local joystick_down=false
  local touched=false
  local last_collect=0
@@ -115,7 +116,7 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  end
  function love.update(dt)
   frame=frame+1
-  stream_ms,terrain_ms,objects_ms=0,0,0
+  stream_ms,terrain_ms,objects_ms,input_ms=0,0,0,0
   if phase=="boot" and status() then
    phase="measured";measured=0
    -- Never charge boot-time object collection to the first measured frame.
@@ -123,12 +124,18 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
    last_collect=metric(om,"collect_calls")
    last_cold=metric(om,"cold_queries")
    last_cold_ms=metric(om,"cold_query_ms")
+   last_pick_ms=metric(om,"pick_ms")
+   last_pick_calls=metric(om,"pick_calls")
+   last_projected=metric(om,"pick_projected")
+   last_skipped=metric(om,"pick_skipped")
    print("R2_PROFILE_READY mode="..mode.." boot_frames="..frame)
    io.stdout:flush()
   end
   if phase=="measured" then
    measured=measured+1
+   local started_input=clock()
    drive()
+   input_ms=(clock()-started_input)*1000
   end
   local start=clock()
   -- Fixed simulation dt to keep gameplay distance comparable among modes.
@@ -158,14 +165,21 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
    last_collect=metric(om,"collect_calls")
    last_cold=metric(om,"cold_queries")
    last_cold_ms=metric(om,"cold_query_ms")
-   csv:write(string.format("%s,%s,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%d,%.4f,%d,%d,%d,%d,%.1f,%d,%.3f,%.2f,%.2f\n",
-     mode,phase,measured,update_ms+draw_ms,update_ms,draw_ms,
+   local pick_ms=metric(om,"pick_ms")-last_pick_ms
+   local pick_calls=metric(om,"pick_calls")-last_pick_calls
+   local projected=metric(om,"pick_projected")-last_projected
+   local skipped=metric(om,"pick_skipped")-last_skipped
+   last_pick_ms,last_pick_calls=metric(om,"pick_ms"),metric(om,"pick_calls")
+   last_projected,last_skipped=metric(om,"pick_projected"),metric(om,"pick_skipped")
+   csv:write(string.format("%s,%s,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%d,%.4f,%d,%d,%d,%d,%.1f,%d,%.3f,%.2f,%.2f,%.4f,%.4f,%d,%d,%d,%.4f\n",
+     mode,phase,measured,input_ms+update_ms+draw_ms,update_ms,draw_ms,
      stream_ms,terrain_ms,objects_ms,
      stats.loaded or 0,stats.needed or 0,stats.pending or 0,ready_count,
      calls,cold,coldms,
      metric(cm,"hits"),metric(cm,"misses"),metric(cm,"invalid"),
      metric(cm,"writes"),collectgarbage("count"),draw.drawcalls or 0,
-     tex/1048576,player.x,player.y))
+     tex/1048576,player.x,player.y,input_ms,pick_ms,pick_calls,
+     projected,skipped,math.max(0,draw_ms-terrain_ms-objects_ms)))
    if os.getenv("OSMAN_R2_ENGINE_LAB")=="1" and
        (measured==math.floor(run_frames/2) or measured==run_frames-10) then
     local frame_name=string.format("r2-engine-%s-%03d.png",mode,measured)
