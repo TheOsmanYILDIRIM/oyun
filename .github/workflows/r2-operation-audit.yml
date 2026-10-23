@@ -8,6 +8,7 @@ on:
       - game/love/world/r2_compat_bridge.lua
       - game/love/tests/r2_height_memo.lua
       - game/love/world/terrain_renderer.lua
+      - scripts/r2_baseline_terrain_renderer.lua.txt
       - .github/workflows/r2-operation-audit.yml
   workflow_dispatch:
 jobs:
@@ -28,7 +29,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/baseline-src/game/love" "$RUNNER_TEMP/baseline-src/data/worldbuild"
           cp -a game/love/. "$RUNNER_TEMP/baseline-src/game/love/"
           cp data/worldbuild/*.json "$RUNNER_TEMP/baseline-src/data/worldbuild/"
-          git show 13931581101fedc7c2868b4c27c642c34eca3de9:game/love/world/terrain_renderer.lua > "$RUNNER_TEMP/baseline-src/game/love/world/terrain_renderer.lua"
+          cp scripts/r2_baseline_terrain_renderer.lua.txt "$RUNNER_TEMP/baseline-src/game/love/world/terrain_renderer.lua"
           python3 scripts/build_r2_grass_preview.py "$RUNNER_TEMP/baseline-src" "$RUNNER_TEMP/base-game" "$RUNNER_TEMP/report/Osman_R2_Baseline.love"
           python3 scripts/r2_operation_instrument.py "$RUNNER_TEMP/base-game"
           luac5.4 -p "$RUNNER_TEMP/op-game/main.lua"
