@@ -67,6 +67,9 @@ R.prewarm(world,stream,1)
 assert(draw(false,720,1100)==draw(true,720,1100),"new resident identity failed")
 local newworld={generator_version=1,is_depleted=world.is_depleted,objects_in=world.objects_in}
 R.collect(newworld,stream)
-assert(#R.prepare(newworld,stream)==#R.prepare(world,stream),
-  "world identity mix")
+local before=R.metrics.static_order_builds
+assert(#R.prepare(newworld,stream)==#objects,
+  "world identity changed object membership")
+assert(R.metrics.static_order_builds==before+1,
+  "new object-world identity reused old sorted references")
 print("R2_STATIC_OBJECT_DEPTH_ORDER_PARITY_OK")
