@@ -3,10 +3,23 @@ local Iso=require("world.iso")
 local Materials=require("world.materials")
 local Marching=require("world.marching")
 local Terrain={}
+local Indexed=require("world.indexed_geometry")
+Terrain.indexed_stats={meshes=0,input_vertices=0,unique_vertices=0}
 local water={.19,.37,.46}
 local profiles={low={grid=64,fleck=64},standard={grid=32,fleck=32},high={grid=16,fleck=16}}
 local function finite(x) return type(x)=="number" and x==x and x>-math.huge and x<math.huge end
 local function graphics() assert(love and love.graphics,"LOVE graphics required");return love.graphics end
+local function uploaded_mesh(raw,indexed,pause)
+ if not indexed then return graphics().newMesh(raw,"triangles","static") end
+ local vertices,order=Indexed.compact(raw,pause)
+ local m=graphics().newMesh(vertices,"triangles","static")
+ m:setVertexMap(order)
+ local s=Terrain.indexed_stats
+ s.meshes=s.meshes+1
+ s.input_vertices=s.input_vertices+#raw
+ s.unique_vertices=s.unique_vertices+#vertices
+ return m
+end
 local function projection(x,y,topo,height_scale)
  local h=topo and topo:height(x,y) or 0
  assert(finite(h),"invalid topography height")
@@ -81,7 +94,7 @@ local function mesh(flat,biome,query,opts,pause)
  end
  if opts._cache_raw then opts._cache_raw[biome]=out end
  if opts.cpu_only then return nil end
- return graphics().newMesh(out,"triangles","static")
+ return uploaded_mesh(out,opts.indexed_mesh,pause)
 end
 local function meadow(chunk,query,opts,pause)
  local out,memo={},{}
@@ -119,7 +132,7 @@ local function meadow(chunk,query,opts,pause)
  end
  if opts._cache_raw then opts._cache_raw.meadow=out end
  if opts.cpu_only then return nil end
- return graphics().newMesh(out,"triangles","static")
+ return uploaded_mesh(out,opts.indexed_mesh,pause)
 end
 local function detail_type(query,opts,x,y)
  local sample=query:sample(x,y)
@@ -290,12 +303,12 @@ function Terrain.prepare_cpu(chunk,query,options,checkpoint)
  chunk._cache_payload=opts._cache_raw
  return true
 end
-local function hydrate(chunk,key,pause)
+local function hydrate(chunk,key,pause,indexed)
  local meshes={}
  chunk._terrain_stage=meshes
  for _,name in ipairs({"meadow","forest","rocky","water","detail"}) do
   local raw=assert(chunk._cache_vertices[name],"cache is missing a material")
-  if #raw>0 then meshes[name]=graphics().newMesh(raw,"triangles","static") end
+  if #raw>0 then meshes[name]=(name=="detail" and graphics().newMesh(raw,"triangles","static") or uploaded_mesh(raw,indexed,pause)) end
   if pause then pause() end
  end
  chunk._terrain_stage=nil
@@ -440,7 +453,7 @@ function Terrain.draw(stream,camera,width,height,options)
   if not clock then
    if chunk._terrain_key~=key then Terrain.invalidate(chunk) end
    local drawable=chunk._terrain_meshes or
-     (chunk._cache_vertices and hydrate(chunk,key) or
+     (chunk._cache_vertices and hydrate(chunk,key,nil,opts.indexed_mesh) or
       rebuild(chunk,stream.query,opts,key))
    if draw_chunk then cached[#cached+1]=drawable end
   else
@@ -455,7 +468,7 @@ function Terrain.draw(stream,camera,width,height,options)
      end
      job={key=key,thread=coroutine.create(function()
        if chunk._cache_vertices then
-        return hydrate(chunk,key,function() coroutine.yield() end)
+        return hydrate(chunk,key,function() coroutine.yield() end,opts.indexed_mesh)
        end
        return rebuild(chunk,stream.query,opts,key,function() coroutine.yield() end)
      end)}

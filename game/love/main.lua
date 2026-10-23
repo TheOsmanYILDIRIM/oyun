@@ -39,6 +39,7 @@ local r2_pilot=r2_pilot_enabled and require("world.r2_playable").new() or nil
 local r2_perf_overhaul=os.getenv("OSMAN_R2_PERF_OVERHAUL")=="1"
 if r2_perf_overhaul and r2_pilot then
  r2_pilot.render_options.viewport_cull=true
+ r2_pilot.render_options.indexed_mesh=true
  ObjectRenderer.viewport_cull=true
 end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
