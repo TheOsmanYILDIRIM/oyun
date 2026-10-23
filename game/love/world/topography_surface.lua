@@ -76,12 +76,33 @@ function M.new(opts)
     -- topography MUST leave this disabled, keeping every collider live.
     _collider_cache=opts.static_collider_cache and {
       values={},keys={},count=0,cursor=1,limit=8192,hits=0,misses=0
+    } or nil,
+    -- Opt-in only: immutable R2 heights, never dynamic production surfaces.
+    _height_cache=opts.static_height_cache and {
+      values={},keys={},count=0,cursor=1,limit=32768,hits=0,misses=0
     } or nil},M)
 end
 
 function M:height(x,y)
   check(x,"invalid world x");check(y,"invalid world y")
-  return check(self.height_at(x,y),"invalid height sample")
+  local cache=self._height_cache
+  if not cache then return check(self.height_at(x,y),"invalid height sample") end
+  -- No coordinate rounding: identical world and collision semantics.
+  local key=string.format("%.17g:%.17g",x,y)
+  local value=cache.values[key]
+  if value~=nil then cache.hits=cache.hits+1;return value end
+  value=check(self.height_at(x,y),"invalid height sample")
+  if cache.count<cache.limit then
+    cache.count=cache.count+1;cache.keys[cache.count]=key
+  else
+    local index=cache.cursor
+    cache.values[cache.keys[index]]=nil
+    cache.keys[index]=key
+    cache.cursor=index%cache.limit+1
+  end
+  cache.values[key]=value
+  cache.misses=cache.misses+1
+  return value
 end
 function M:zone(x,y)
   check(x);check(y)
