@@ -97,6 +97,7 @@ if r2_perf_overhaul and r2_pilot then
  stream.viewport_cover=true
  -- Low-priority CPU geometry prefetch must never consume movement frames.
  stream.prefetch_idle_only=true
+ stream.fast_cover_candidates=true
 end
 local long_mode=os.getenv("OSMAN_R2_LONG_TRAVERSAL")
 assert(not long_mode or

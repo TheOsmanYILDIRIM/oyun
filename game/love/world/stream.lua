@@ -77,6 +77,25 @@ function Stream:needed(camera,width,height)
       distance=(midx-camera.x)^2+(midy-camera.y)^2
     }
   end end
+  -- Preserve exact comparator order while skipping the offscreen halo
+  -- sort when all necessary screen chunks already meet the residency cap.
+  if self.viewport_cover and self.fast_cover_candidates then
+    local required,halo={},{}
+    local pad=160*camera.zoom+16
+    for _,c in ipairs(candidates) do
+      if overlaps_view(c.cx,c.cy,size,camera,width,height,pad) then
+        required[#required+1]=c
+      else halo[#halo+1]=c end
+    end
+    table.sort(required,less)
+    if #required<self.max_loaded then
+      table.sort(halo,less)
+      for i=1,math.min(#halo,self.max_loaded-#required) do
+        required[#required+1]=halo[i]
+      end
+    end
+    return required
+  end
   table.sort(candidates,less)
   if self.viewport_cover then
     -- Render-only R2 opt-in: no foreground-screen chunk may be sacrificed

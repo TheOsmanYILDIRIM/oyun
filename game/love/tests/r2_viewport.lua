@@ -77,6 +77,29 @@ end
 world.viewport_cover=nil
 cam.x,cam.y,cam.zoom=64,128,1.7
 
+-- Exact R2 sort, chunk IDs and nearest-first order across displays.
+for _,size in ipairs({{320,700},{360,780},{691,1536},
+                      {720,1600},{1280,800},{800,360}}) do
+ for _,zoom in ipairs({.65,.9,1.7,3.2,4.5}) do
+  for _,pos in ipairs({{64,128},{704,128},{-256,-300},
+                        {130.7,247.1},{512,512}}) do
+   cam.x,cam.y,cam.zoom=pos[1],pos[2],zoom
+   world.viewport_cover=true
+   world.fast_cover_candidates=nil
+   local a=world:needed(cam,size[1],size[2])
+   world.fast_cover_candidates=true
+   local b=world:needed(cam,size[1],size[2])
+   assert(#a==#b,"screen-covered residency count changed")
+   for i=1,#a do
+    assert(a[i].key==b[i].key and a[i].distance==b[i].distance,
+      "visible chunk ranking changed")
+   end
+  end
+ end
+end
+world.fast_cover_candidates=nil;world.viewport_cover=nil
+cam.x,cam.y,cam.zoom=64,128,1.7
+print("R2_FAST_COVER_ORDER_PARITY_OK cases=150")
 -- Default Stream:needed ordering and cap remain unchanged when opt-in is off.
 assert(#world:needed(cam,720,1600)==48)
 print("R2_VIEWPORT_RENDER_ONLY_TEST_OK")
