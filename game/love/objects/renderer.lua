@@ -95,6 +95,37 @@ function R.collect(world,stream)
   end
   return list
 end
+-- Immutable candidate generation is spread over the loading scene. This
+-- does NOT cache depletion, day-based regrowth, or mutable saved world state.
+-- Only one chunk query is performed per update; a single native query itself
+-- cannot be preempted. World identity and resident identity are checked live.
+function R.prewarm(world,stream,limit)
+ if world.generator_version~=1 or
+    type(world.is_depleted)~="function" then return 0,true end
+ limit=limit or 1
+ assert(type(limit)=="number" and limit>=1 and limit%1==0 and limit<=4,
+   "object candidate prewarm budget must be 1..4 chunks")
+ local pending={}
+ local done=true
+ for _,chunk in ipairs(stream:visible()) do
+  if chunk._object_render_world~=world or not chunk._object_render_candidates then
+   done=false
+   if #pending<limit then pending[#pending+1]=chunk end
+  end
+ end
+ if #pending>0 then
+  R.collect(world,{visible=function() return pending end})
+ end
+ if done then return 0,true end
+ -- Recheck: never mark ready with an outstanding candidate in the snapshot.
+ for _,chunk in ipairs(stream:visible()) do
+  if chunk._object_render_world~=world or not chunk._object_render_candidates then
+   return #pending,false
+  end
+ end
+ return #pending,true
+end
+
 function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   local all=R.collect(world,stream)
   local order={{id="!player",depth=Depth.key(player.x,player.y),player=true}}

@@ -401,7 +401,14 @@ function love.update(dt)
   local perf_begin=love.timer.getTime()
   if cache_pilot_enabled and not boot_ready then
     stats=stream:update(camera,w,h)
-    local ready=stats.pending==0 and stats.loaded>0
+    -- Move the expensive immutable object queries out of the first playable
+    -- frame. One bounded chunk per world-preparation frame.
+    local objects_ready=true
+    if r2_perf_overhaul then
+      local _,done=ObjectRenderer.prewarm(objects,stream,1)
+      objects_ready=done
+    end
+    local ready=objects_ready and stats.pending==0 and stats.loaded>0
     for _,c in ipairs(stream:visible()) do
       if not c._terrain_meshes then ready=false;break end
     end
@@ -503,6 +510,7 @@ function love.update(dt)
   end
   if not debug_view then camera.x,camera.y=player.x,player.y end
   stats=stream:update(camera,w,h)
+  if r2_perf_overhaul then ObjectRenderer.prewarm(objects,stream,1) end
   if long_driver then long_driver:afterUpdate(stats) end
   if os.getenv("OSMAN_CHUNK_CACHE_BASELINE_SMOKE")=="1"
    or os.getenv("OSMAN_CHUNK_CACHE_SMOKE")=="1" then

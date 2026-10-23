@@ -386,7 +386,7 @@ function Terrain.draw(stream,camera,width,height,options)
  local opts={grid=profile.grid,fleck=profile.fleck,
   topography=options.topography,height_scale=scale,routes=options.routes,
   boundaries=authored_boundaries(stream.query,options.routes),
-  cache=stream.cache}
+  cache=stream.cache,indexed_mesh=options.indexed_mesh==true}
  local key=quality..":"..tostring(scale)..":"..tostring(options.topography)
           ..":"..tostring(options.routes)..":"..tostring(stream.query)
  local chunks=stream:visible()
