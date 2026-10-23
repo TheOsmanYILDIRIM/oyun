@@ -42,6 +42,7 @@ if r2_perf_overhaul and r2_pilot then
  r2_pilot.render_options.indexed_mesh=true
  ObjectRenderer.viewport_cull=true
  ObjectRenderer.order_cull=true
+ ObjectRenderer.pick_x_cull=true
 end
 local r2_pilot_smoke=r2_pilot and os.getenv("OSMAN_R2_G_SMOKE")=="1"
   and require("tests.r2_pilot_smoke") or nil

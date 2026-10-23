@@ -2,7 +2,9 @@
 local Depth=require("player.depth")
 local Iso=require("world.iso")
 local R={metrics={collect_calls=0,cold_queries=0,cold_query_ms=0,
- cold_query_max_ms=0,collect_last_ms=0,collect_max_ms=0}}
+ cold_query_max_ms=0,collect_last_ms=0,collect_max_ms=0,
+ pick_calls=0,pick_ms=0,pick_last_ms=0,pick_max_ms=0,
+ pick_projected=0,pick_skipped=0}}
 local CoreVisual=require("player.core_visual")
 local AxeStrike=require("player.axe_strike")
 local axe_image=nil
@@ -180,15 +182,41 @@ function R.draw(world,stream,camera,w,h,player,selected_id,harvesting)
   return #all
 end
 function R.pick(world,stream,camera,w,h,sx,sy)
+  local clock=love and love.timer and love.timer.getTime
+  local start=clock and clock()
+  local metrics=R.metrics
+  metrics.pick_calls=metrics.pick_calls+1
   local closest,best=nil,math.huge
+  local projected,skipped=0,0
   for _,o in ipairs(R.collect(world,stream)) do
-    local x,y=camera:project(o.x,o.y,w,h)
-    local height=o.kind=="tree" and 42 or 15
-    local dx=(sx-x)/camera.zoom
-    local dy=(sy-y)/camera.zoom+height
-    local d=dx*dx+(dy*.7)*(dy*.7)
     local threshold=o.kind=="tree" and 32 or 22
-    if d<threshold*threshold and d<best then closest,best=o,d end
+    local candidate=true
+    if R.pick_x_cull then
+      -- True X for the mounted 45-degree camera, independent of height.
+      -- A circle with |dx|>=radius cannot be picked; no false negatives.
+      local flat_x=Iso.project(o.x-camera.x,o.y-camera.y)
+      local screen_x=w*.5+flat_x*camera.zoom
+      if math.abs((sx-screen_x)/camera.zoom)>=threshold then
+        candidate=false;skipped=skipped+1
+      end
+    end
+    if candidate then
+      projected=projected+1
+      local x,y=camera:project(o.x,o.y,w,h)
+      local height=o.kind=="tree" and 42 or 15
+      local dx=(sx-x)/camera.zoom
+      local dy=(sy-y)/camera.zoom+height
+      local d=dx*dx+(dy*.7)*(dy*.7)
+      if d<threshold*threshold and d<best then closest,best=o,d end
+    end
+  end
+  metrics.pick_projected=metrics.pick_projected+projected
+  metrics.pick_skipped=metrics.pick_skipped+skipped
+  if start then
+    local ms=(clock()-start)*1000
+    metrics.pick_ms=metrics.pick_ms+ms
+    metrics.pick_last_ms=ms
+    metrics.pick_max_ms=math.max(metrics.pick_max_ms,ms)
   end
   return closest
 end
