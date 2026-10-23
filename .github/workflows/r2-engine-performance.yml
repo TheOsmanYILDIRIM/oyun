@@ -64,6 +64,9 @@ jobs:
               mkdir -p "$XDG_DATA_HOME"
               timeout 540s xvfb-run -a -s '-screen 0 1280x1800x24' love "$RUNNER_TEMP/game" 2>&1 | tee "$case.log"
               grep -q "R2_PROFILE_DONE mode=$case frames=180" "$case.log"
+              if [ "$variant" = optimized ]; then
+                grep -q "R2_FONT_PREWARM_DONE" "$case.log"
+              fi
               test -s "r2-profile-$case.csv"
               find "$XDG_DATA_HOME" -name 'r2-engine-*.png' -type f -exec cp {} . \;
             done
@@ -88,6 +91,9 @@ jobs:
               assert len(rows)==180,(name,len(rows))
               routes[variant]=rows
               out["trials"][name]={k:{"p50":pct([float(r[k]) for r in rows],.5),"p95":pct([float(r[k]) for r in rows],.95),"p99":pct([float(r[k]) for r in rows],.99),"max":round(max(float(r[k]) for r in rows),3)} for k in keys}
+              if variant=="optimized":
+                worst_font=max(float(r["print_ms"]) for r in rows)
+                assert worst_font < 3.0, (name,"unexpected runtime glyph upload",worst_font)
               out["trials"][name]["first_measured_frame"]={k:round(float(rows[0][k]),3) for k in ("elapsed_ms","objects_ms","object_cold_queries","object_cold_ms","drawcalls")}
             a,b=routes["baseline"],routes["optimized"]
             delta=max(math.hypot(float(x["x"])-float(y["x"]),float(x["y"])-float(y["y"])) for x,y in zip(a,b))
