@@ -77,7 +77,7 @@ jobs:
           import csv,json,math,pathlib
           from PIL import Image,ImageChops
           out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU proxy; matched complete screen-chunk coverage in BOTH modes; navigation test-only 2 real collision queries/frame; not Android/GPU present timing","trials":{},"pairs":[]}
-          keys=("elapsed_ms","input_ms","pick_ms","pick_calls","pick_projected","pick_skipped","draw_other_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
+          keys=("elapsed_ms","input_ms","pick_ms","pick_calls","pick_projected","pick_skipped","draw_other_ms","print_ms","printf_ms","hud_ms","stat_ms","placed_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
           def pct(a,q):
             a=sorted(a);return round(a[int((len(a)-1)*q)],3)
           for n in (1,2):

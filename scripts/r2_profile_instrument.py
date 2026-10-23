@@ -39,7 +39,7 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local hard_frames=tonumber(os.getenv("OSMAN_R2_PROFILE_BOOT_MAX")) or 1800
  local frame,measured,phase=0,0,"boot"
  local csv=assert(io.open("r2-profile-"..mode..".csv","w"))
- csv:write("mode,phase,frame,elapsed_ms,update_ms,draw_ms,stream_ms,terrain_ms,objects_ms,loaded,needed,pending,mesh_ready,object_collect_calls,object_cold_queries,object_cold_ms,cache_hits,cache_misses,cache_invalid,cache_writes,lua_kib,drawcalls,texture_mb,x,y,input_ms,pick_ms,pick_calls,pick_projected,pick_skipped,draw_other_ms\n")
+ csv:write("mode,phase,frame,elapsed_ms,update_ms,draw_ms,stream_ms,terrain_ms,objects_ms,loaded,needed,pending,mesh_ready,object_collect_calls,object_cold_queries,object_cold_ms,cache_hits,cache_misses,cache_invalid,cache_writes,lua_kib,drawcalls,texture_mb,x,y,input_ms,pick_ms,pick_calls,pick_projected,pick_skipped,draw_other_ms,print_ms,printf_ms,hud_ms,stat_ms,placed_ms\n")
  local function metric(m,k) return m and m[k] or 0 end
  local org_stream=stream.update
  local stream_ms,terrain_ms,objects_ms=0,0,0
@@ -67,6 +67,37 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local old_draw=love.draw
  local update_ms,draw_ms,input_ms=0,0,0
  local last_pick_ms,last_pick_calls,last_projected,last_skipped=0,0,0,0
+ local print_ms,printf_ms,hud_ms,stat_ms,placed_ms=0,0,0,0,0
+ local graphics=love.graphics
+ local native_print,native_printf=graphics.print,graphics.printf
+ function graphics.print(...)
+  local st=clock();local out=native_print(...)
+  print_ms=print_ms+(clock()-st)*1000
+  return out
+ end
+ function graphics.printf(...)
+  local st=clock();local out=native_printf(...)
+  printf_ms=printf_ms+(clock()-st)*1000
+  return out
+ end
+ local old_hud=stage_hud.draw
+ function stage_hud:draw(...)
+  local st=clock();local out=old_hud(self,...)
+  hud_ms=hud_ms+(clock()-st)*1000
+  return out
+ end
+ local old_stat=stat_hud.draw
+ function stat_hud:draw(...)
+  local st=clock();local out=old_stat(self,...)
+  stat_ms=stat_ms+(clock()-st)*1000
+  return out
+ end
+ local old_placed=PlacedRenderer.draw
+ function PlacedRenderer.draw(...)
+  local st=clock();local out=old_placed(...)
+  placed_ms=placed_ms+(clock()-st)*1000
+  return out
+ end
  local joystick_down=false
  local touched=false
  local last_collect=0
@@ -117,6 +148,7 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
  function love.update(dt)
   frame=frame+1
   stream_ms,terrain_ms,objects_ms,input_ms=0,0,0,0
+  print_ms,printf_ms,hud_ms,stat_ms,placed_ms=0,0,0,0,0
   if phase=="boot" and status() then
    phase="measured";measured=0
    -- Never charge boot-time object collection to the first measured frame.
@@ -171,7 +203,7 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
    local skipped=metric(om,"pick_skipped")-last_skipped
    last_pick_ms,last_pick_calls=metric(om,"pick_ms"),metric(om,"pick_calls")
    last_projected,last_skipped=metric(om,"pick_projected"),metric(om,"pick_skipped")
-   csv:write(string.format("%s,%s,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%d,%.4f,%d,%d,%d,%d,%.1f,%d,%.3f,%.2f,%.2f,%.4f,%.4f,%d,%d,%d,%.4f\n",
+   csv:write(string.format("%s,%s,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%d,%.4f,%d,%d,%d,%d,%.1f,%d,%.3f,%.2f,%.2f,%.4f,%.4f,%d,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
      mode,phase,measured,input_ms+update_ms+draw_ms,update_ms,draw_ms,
      stream_ms,terrain_ms,objects_ms,
      stats.loaded or 0,stats.needed or 0,stats.pending or 0,ready_count,
@@ -179,7 +211,8 @@ if os.getenv("OSMAN_R2_PROFILE")=="1" then
      metric(cm,"hits"),metric(cm,"misses"),metric(cm,"invalid"),
      metric(cm,"writes"),collectgarbage("count"),draw.drawcalls or 0,
      tex/1048576,player.x,player.y,input_ms,pick_ms,pick_calls,
-     projected,skipped,math.max(0,draw_ms-terrain_ms-objects_ms)))
+     projected,skipped,math.max(0,draw_ms-terrain_ms-objects_ms),
+     print_ms,printf_ms,hud_ms,stat_ms,placed_ms))
    if os.getenv("OSMAN_R2_ENGINE_LAB")=="1" and
        (measured==math.floor(run_frames/2) or measured==run_frames-10) then
     local frame_name=string.format("r2-engine-%s-%03d.png",mode,measured)
