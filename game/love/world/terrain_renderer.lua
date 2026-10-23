@@ -492,6 +492,8 @@ function Terrain.draw(stream,camera,width,height,options)
  -- after a neighbour's forest/water layer creates hard rectangular seams.
  lg.setColor(1,1,1,1)
  local material_calls=0
+ local material_clock=Terrain.on_material_phase and clock
+ local material_start=material_clock and material_clock()
  for _,name in ipairs({"meadow","forest","rocky","water","detail"}) do
   for _,drawables in ipairs(cached) do
    if drawables[name] then
@@ -499,6 +501,10 @@ function Terrain.draw(stream,camera,width,height,options)
     material_calls=material_calls+1
    end
   end
+ end
+ if material_start then
+  Terrain.on_material_phase((material_clock()-material_start)*1000,
+    material_calls)
  end
  lg.pop()
  if Terrain.on_visibility then
