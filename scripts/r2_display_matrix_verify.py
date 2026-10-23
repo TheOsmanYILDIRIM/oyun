@@ -9,7 +9,8 @@ root=Path(sys.argv[1])
 cases=[
  (320,700,1.7),(360,780,1.7),(392,850,1.7),
  (411,891,1.7),(691,1536,1.7),(720,1600,1.7),
- (1280,800,1.7),(360,780,.65),(360,780,3.2)
+ (1280,800,1.7),(360,780,.65),(360,780,3.2),
+ (800,360,1.7)
 ]
 rows=list(csv.DictReader((root/"R2_DISPLAY_MATRIX.csv").open()))
 assert len(rows)==len(cases), (len(rows),len(cases))
@@ -31,6 +32,14 @@ for i,(w,h,z) in enumerate(cases,1):
   # Three test-only frames of settled streaming and a full playable draw.
   stat=ImageStat.Stat(rgb1)
   assert max(stat.stddev)>5,("blank scene",i,stat.stddev)
+  for page in ("items","actions"):
+   shot=root/f"matrix-{i:02d}-hud-{page}.png"
+   assert shot.is_file(),shot
+   with Image.open(shot) as screenshot:
+    screenshot.load()
+    assert screenshot.size==(w,h)
+    assert max(ImageStat.Stat(screenshot.convert("RGB")).stddev)>5,
+      ("blank compact HUD frame",shot)
   record={"case":i,"logical":[w,h],"zoom":z,"reported_dpi":float(row["dpi"]),
     "resident_chunks":int(row["loaded"]),"drawcalls":int(row["drawcalls"]),
     "pixel_equal":bbox is None,"diff_bbox":bbox}

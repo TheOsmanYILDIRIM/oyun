@@ -14,10 +14,24 @@ if os.getenv("OSMAN_R2_DISPLAY_MATRIX")=="1" then
  local layouts={
   {320,700,1.7},{360,780,1.7},{392,850,1.7},
   {411,891,1.7},{691,1536,1.7},{720,1600,1.7},
-  {1280,800,1.7},{360,780,.65},{360,780,3.2}
+  {1280,800,1.7},{360,780,.65},{360,780,3.2},
+  {800,360,1.7}
  }
  local phase="advance"
  local index,stable,ticks=0,0,0
+ local override_safe=false
+ local normal_safe=safe_area
+ safe_area=function()
+  if override_safe then
+   local landscape=w>h
+   local left=landscape and 40 or 0
+   local top=landscape and 16 or (w<=360 and 52 or 46)
+   local right=landscape and 28 or 0
+   local bottom=landscape and 12 or (w<=360 and 40 or 32)
+   return left,top,w-left-right,h-top-bottom
+  end
+  return normal_safe()
+ end
  local function variant(enabled)
   r2_pilot.render_options.viewport_cull=enabled
   ObjectRenderer.viewport_cull=enabled
@@ -49,6 +63,8 @@ if os.getenv("OSMAN_R2_DISPLAY_MATRIX")=="1" then
      "logical viewport differs from requested display")
    camera.zoom=layout[3]
    stable=0
+   override_safe=false
+   stage_hud.open=false
    variant(true)
    phase="warm"
   end
@@ -84,6 +100,32 @@ if os.getenv("OSMAN_R2_DISPLAY_MATRIX")=="1" then
      stats.loaded,stats.needed,st.drawcalls or 0,
      (st.texturememory or 0)/1048576))
    fp:close()
+   override_safe=true
+   stage_hud.open=true
+   stage_hud.page=1
+   phase="hud-items"
+  elseif phase=="hud-items" then
+   local sx,sy,sw,sh=safe_area()
+   local safe={x=sx,y=sy,w=sw,h=sh}
+   local bag=stage_hud:hit(sx+sw-64,sy+32,safe)
+   assert(bag=="inventory","R2 bag not clickable under simulated cutout")
+   love.graphics.captureScreenshot(string.format("matrix-%02d-hud-items.png",index))
+   stage_hud.page=2
+   phase="hud-actions"
+  elseif phase=="hud-actions" then
+   local sx,sy,sw,sh=safe_area()
+   local safe={x=sx,y=sy,w=sw,h=sh}
+   if sh<680 then
+    local controls=stage_hud:layout(safe)
+    local build
+    for _,b in ipairs(controls) do if b.id=="build" then build=b end end
+    assert(build and stage_hud:hit(build.x+build.w/2,
+      build.y+build.h/2,safe)=="build",
+      "R2 craft controls not touchable in safe landscape/portrait")
+   end
+   love.graphics.captureScreenshot(string.format("matrix-%02d-hud-actions.png",index))
+   stage_hud.open=false
+   override_safe=false
    phase="advance"
   end
  end

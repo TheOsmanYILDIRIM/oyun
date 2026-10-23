@@ -150,7 +150,7 @@ jobs:
           export OSMAN_R2_PILOT=1 OSMAN_CHUNK_CACHE_PILOT=1
           export OSMAN_R2_PERF_OVERHAUL=1 OSMAN_R2_DISPLAY_MATRIX=1
           timeout 1900s xvfb-run -a -s '-screen 0 1600x2400x24' love "$RUNNER_TEMP/display-game" 2>&1 | tee display.log
-          grep -q "R2_DISPLAY_MATRIX_DONE cases=9" display.log
+          grep -q "R2_DISPLAY_MATRIX_DONE cases=10" display.log
           find "$XDG_DATA_HOME" -type f -name 'matrix-*.png' -exec cp {} . \;
           python3 "$GITHUB_WORKSPACE/scripts/r2_display_matrix_verify.py" .
       - name: Upload original playable package and viewport screenshots

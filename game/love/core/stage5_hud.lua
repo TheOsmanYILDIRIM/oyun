@@ -14,8 +14,12 @@ function H:layout(s)
   local x,y,w,h=s.x,s.y,s.w,s.h
   local out={}
   assert(type(x)=="number" and type(y)=="number" and
-    type(w)=="number" and type(h)=="number" and w>=180 and h>=260,
-    "R2 HUD needs a usable logical safe area")
+    type(w)=="number" and type(h)=="number" and w>0 and h>0,
+    "invalid logical HUD safe area")
+  if self.compact_layout then
+    assert(w>=180 and h>=260,
+      "compact R2 HUD requires >=180x260 safe logical viewport")
+  end
   local pad=math.max(8,math.min(14,w*.03))
   local unit=math.min(52,(w-pad*2-16)/5)
   add(out,"inventory",x+w-116,y+12,104,40)
@@ -83,7 +87,8 @@ function H:layout(s)
     add(out,"cancel",px+(pw+8)/2,pt+283*scale,(pw-8)/2,38*scale)
   end
   if self.placing then
-    add(out,"confirm",x+w-136,y+h-355,120,54)
+    add(out,"confirm",x+w-136,
+      compact and (y+h-80) or (y+h-355),120,54)
   end
   return out
 end
