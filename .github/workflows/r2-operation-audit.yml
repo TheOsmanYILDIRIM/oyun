@@ -4,6 +4,9 @@ on:
     branches: [experiment/r2-grass-texture-preview-20261022]
     paths:
       - scripts/r2_operation_instrument.py
+      - game/love/world/topography_surface.lua
+      - game/love/world/r2_compat_bridge.lua
+      - game/love/tests/r2_height_memo.lua
       - .github/workflows/r2-operation-audit.yml
   workflow_dispatch:
 jobs:
@@ -25,14 +28,17 @@ jobs:
           cd game/love
           lua5.4 tests/player_stage3.lua
           lua5.4 tests/r2_topography_surface.lua
+          lua5.4 tests/r2_height_memo.lua
+          luajit tests/r2_height_memo.lua
       - name: Real gameplay callback sequences and single-frame operation traces
         shell: bash
         run: |
           set -euo pipefail
           export OSMAN_R2_PILOT=1 OSMAN_R2_OP_AUDIT=1 OSMAN_R2_OP_FRAMES=180
           export OSMAN_CHUNK_CACHE_PILOT=0
-          for mode in idle player_walk; do
-            export OSMAN_R2_OP_MOTION="$mode"
+          for mode in idle player_walk_plain player_walk_memo; do
+            if [[ "$mode" == "idle" ]]; then export OSMAN_R2_OP_MOTION=idle; else export OSMAN_R2_OP_MOTION=player_walk; fi
+            if [[ "$mode" == "player_walk_memo" ]]; then export OSMAN_R2_HEIGHT_CACHE=1; else export OSMAN_R2_HEIGHT_CACHE=0; fi
             export XDG_DATA_HOME="$RUNNER_TEMP/user-$mode"
             mkdir -p "$XDG_DATA_HOME"
             cd "$RUNNER_TEMP/report"
@@ -50,7 +56,7 @@ jobs:
           python3 - <<'PY'
           import csv,json,pathlib,statistics
           result={}
-          for name in ("idle","player_walk"):
+          for name in ("idle","player_walk_plain","player_walk_memo"):
             frames=list(csv.DictReader(open(name+"-frames.csv")))
             calls=list(csv.DictReader(open(name+"-calls.csv")))
             assert len(frames)==180 and len(calls)>0,(name,len(frames),len(calls))
@@ -78,7 +84,7 @@ jobs:
               slowest_frames=trace)
           pathlib.Path("R2_OPERATIONS.json").write_text(json.dumps(result,indent=2))
           with open("R2_OPERATIONS.md","w") as out:
-            out.write("# R2 Operation root-cause report\n\nActual Linux/Xvfb LÖVE, not Android or GPU profiler. Nested function totals overlap; do not sum them.\n\n")
+            out.write("# R2 Operation root-cause report\n\nActual Linux/Xvfb LÖVE, not Android or GPU profiler. Nested function totals overlap; do not sum them. Chunk coroutine function wall-times include suspended frames; stream.update captures actual on-frame cost.\n\n")
             for mode,val in result.items():
               out.write("## "+mode+"\n\n")
               out.write("Frame p50/p95/p99: %.3f / %.3f / %.3f ms; distance %.1f world units\n\n"%(val["p50"],val["p95"],val["p99"],val["distance"]))
