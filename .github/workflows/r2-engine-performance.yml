@@ -1,0 +1,109 @@
+name: R2 engine performance A/B on real LÖVE
+on:
+  push:
+    branches: [experiment/r2-engine-performance-overhaul-20261023]
+    paths:
+      - game/love/main.lua
+      - game/love/world/terrain_renderer.lua
+      - game/love/objects/renderer.lua
+      - scripts/r2_profile_instrument.py
+      - .github/workflows/r2-engine-performance.yml
+  workflow_dispatch:
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LÖVE, Lua, Xvfb, Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y love xvfb lua5.4 luajit python3-pil
+      - name: Build full portable playable package and isolated profiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/report"
+          python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/game" "$RUNNER_TEMP/report/Osman_R2_Engine_Performance.love"
+          python3 scripts/r2_profile_instrument.py "$RUNNER_TEMP/game"
+          luac5.4 -p "$RUNNER_TEMP/game/main.lua" "$RUNNER_TEMP/game/world/terrain_renderer.lua" "$RUNNER_TEMP/game/objects/renderer.lua"
+          (cd game/love && lua5.4 tests/r2_viewport.lua && lua5.4 tests/r2_cpu_cache_regression.lua && luajit tests/r2_viewport.lua && luajit tests/r2_cpu_cache_regression.lua)
+          sha256sum "$RUNNER_TEMP/report/Osman_R2_Engine_Performance.love" > "$RUNNER_TEMP/report/LOVE_SHA256.txt"
+          lscpu > "$RUNNER_TEMP/report/CI_CPU.txt"
+      - name: Paired fixed-step touch and joystick routes (two trials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          export OSMAN_R2_PROFILE=1 OSMAN_R2_PILOT=1 OSMAN_CHUNK_CACHE_PILOT=1
+          export OSMAN_PROFILE_TEXTURE=1 OSMAN_R2_PROFILE_FIXED_STEP=1 OSMAN_R2_ENGINE_LAB=1
+          export OSMAN_R2_PROFILE_FRAMES=180 OSMAN_R2_PROFILE_BOOT_MAX=3200
+          for trial in 1 2; do
+            for variant in baseline optimized; do
+              case="${variant}_walk_${trial}"
+              export OSMAN_R2_PROFILE_MODE="$case"
+              export OSMAN_R2_PERF_OVERHAUL=0
+              if [ "$variant" = optimized ]; then export OSMAN_R2_PERF_OVERHAUL=1; fi
+              export XDG_DATA_HOME="$RUNNER_TEMP/user-$case"
+              mkdir -p "$XDG_DATA_HOME"
+              timeout 540s xvfb-run -a -s '-screen 0 1280x1800x24' love "$RUNNER_TEMP/game" 2>&1 | tee "$case.log"
+              grep -q "R2_PROFILE_DONE mode=$case frames=180" "$case.log"
+              test -s "r2-profile-$case.csv"
+              find "$XDG_DATA_HOME" -name 'r2-engine-*.png' -type f -exec cp {} . \;
+            done
+          done
+      - name: Audit percentile wins, exact movement, screen parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/report"
+          python3 - <<'PY'
+          import csv,json,math,pathlib
+          from PIL import Image,ImageChops
+          out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU frame proxy; not Android/GPU present timing","trials":{},"pairs":[]}
+          keys=("elapsed_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
+          def pct(a,q):
+            a=sorted(a);return round(a[int((len(a)-1)*q)],3)
+          for n in (1,2):
+            routes={}
+            for variant in ("baseline","optimized"):
+              name=f"{variant}_walk_{n}"
+              rows=list(csv.DictReader(open(f"r2-profile-{name}.csv")))
+              assert len(rows)==180,(name,len(rows))
+              routes[variant]=rows
+              out["trials"][name]={k:{"p50":pct([float(r[k]) for r in rows],.5),"p95":pct([float(r[k]) for r in rows],.95),"p99":pct([float(r[k]) for r in rows],.99)} for k in keys}
+            a,b=routes["baseline"],routes["optimized"]
+            delta=max(math.hypot(float(x["x"])-float(y["x"]),float(x["y"])-float(y["y"])) for x,y in zip(a,b))
+            pair={"trial":n,"route_max_delta":delta,"png":[]}
+            for frame in (90,170):
+              p=pathlib.Path(f"r2-engine-baseline_walk_{n}-{frame:03}.png")
+              q=pathlib.Path(f"r2-engine-optimized_walk_{n}-{frame:03}.png")
+              assert p.exists() and q.exists(),(str(p),str(q))
+              with Image.open(p) as aa,Image.open(q) as bb:
+                assert aa.size==bb.size
+                diff=ImageChops.difference(aa.convert("RGB"),bb.convert("RGB"))
+                pair["png"].append({"frame":frame,"identical":diff.getbbox() is None,"bbox":diff.getbbox()})
+            baseline=out["trials"][f"baseline_walk_{n}"]["elapsed_ms"]
+            improved=out["trials"][f"optimized_walk_{n}"]["elapsed_ms"]
+            pair["p95_gain_percent"]=round((1-improved["p95"]/baseline["p95"])*100,2)
+            pair["p99_gain_percent"]=round((1-improved["p99"]/baseline["p99"])*100,2)
+            pair["accept_p95_below_16_7"]=improved["p95"]<16.7
+            pair["accept_p99_below_25"]=improved["p99"]<25
+            out["pairs"].append(pair)
+          pathlib.Path("R2_ENGINE_AB.json").write_text(json.dumps(out,indent=2))
+          rows=["# R2 R2 engine A/B (real LÖVE/Xvfb Linux proxy)","", "Not an Android or GPU-present benchmark.", "", "|Trial|p95 base → optimized ms|p99 base → optimized ms|Gain p95/p99|Max position delta|Identical PNG|", "|---|---|---|---|---|---|"]
+          for pair in out["pairs"]:
+            n=pair["trial"];a=out["trials"][f"baseline_walk_{n}"]["elapsed_ms"];b=out["trials"][f"optimized_walk_{n}"]["elapsed_ms"]
+            rows.append(f'|{n}|{a["p95"]} → {b["p95"]}|{a["p99"]} → {b["p99"]}|{pair["p95_gain_percent"]}% / {pair["p99_gain_percent"]}%|{pair["route_max_delta"]:.3f}|{all(x["identical"] for x in pair["png"])}|')
+          pathlib.Path("R2_ENGINE_AB.md").write_text("\n".join(rows)+"\n")
+          print("\n".join(rows))
+          assert all(x["route_max_delta"]<.05 for x in out["pairs"]), "player route diverged"
+          assert all(p["identical"] for x in out["pairs"] for p in x["png"]), "visible pixel regression"
+          PY
+      - name: Upload .love, CSV JSON Markdown and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osman-R2-Engine-Performance-AB
+          path: ${{ runner.temp }}/report/
+          if-no-files-found: warn
