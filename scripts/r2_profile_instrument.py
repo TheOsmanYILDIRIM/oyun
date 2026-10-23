@@ -10,6 +10,12 @@ profile=r'''
 -- R2 PROFILE LAB: isolated package instrumentation; no gameplay files modified.
 if os.getenv("OSMAN_R2_PROFILE")=="1" then
  local clock=love.timer.getTime
+ -- In a screen-cover comparison both modes must load the SAME complete
+ -- geometry. The former 48-nearest baseline omitted screen-edge chunks.
+ -- Never mistake repaired coverage for a pixel/material regression.
+ if os.getenv("OSMAN_R2_PROFILE_COVER_MATCH")=="1" then
+  stream.viewport_cover=true
+ end
  local mode=assert(os.getenv("OSMAN_R2_PROFILE_MODE"),"profile mode")
  local motion=mode:find("walk",1,true)~=nil
  -- Benchmark-only fixed query count for the *real* A* worker and CCD.

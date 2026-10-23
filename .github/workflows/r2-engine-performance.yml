@@ -48,6 +48,7 @@ jobs:
           export OSMAN_R2_PROFILE=1 OSMAN_R2_PILOT=1 OSMAN_CHUNK_CACHE_PILOT=1
           export OSMAN_PROFILE_TEXTURE=1 OSMAN_R2_PROFILE_FIXED_STEP=1 OSMAN_R2_ENGINE_LAB=1
           export OSMAN_R2_NAV_FIXED_QUERY_BUDGET=1
+          export OSMAN_R2_PROFILE_COVER_MATCH=1
           export OSMAN_R2_PROFILE_FRAMES=180 OSMAN_R2_PROFILE_BOOT_MAX=3200
           for trial in 1 2; do
             for variant in baseline optimized; do
@@ -71,7 +72,7 @@ jobs:
           python3 - <<'PY'
           import csv,json,math,pathlib
           from PIL import Image,ImageChops
-          out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU frame proxy; NAV staging worker fixed to 2 real collision checkpoints/frame; production wall-clock A* budget NOT used; not Android/GPU present timing","trials":{},"pairs":[]}
+          out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU proxy; matched complete screen-chunk coverage in BOTH modes; navigation test-only 2 real collision queries/frame; not Android/GPU present timing","trials":{},"pairs":[]}
           keys=("elapsed_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
           def pct(a,q):
             a=sorted(a);return round(a[int((len(a)-1)*q)],3)
