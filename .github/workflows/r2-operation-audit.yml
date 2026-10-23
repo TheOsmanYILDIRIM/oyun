@@ -7,6 +7,7 @@ on:
       - game/love/world/topography_surface.lua
       - game/love/world/r2_compat_bridge.lua
       - game/love/tests/r2_height_memo.lua
+      - game/love/world/terrain_renderer.lua
       - .github/workflows/r2-operation-audit.yml
   workflow_dispatch:
 jobs:
@@ -24,6 +25,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/report"
           python3 scripts/build_r2_grass_preview.py . "$RUNNER_TEMP/op-game" "$RUNNER_TEMP/report/Osman_R2_OpAudit.love"
           python3 scripts/r2_operation_instrument.py "$RUNNER_TEMP/op-game"
+          mkdir -p "$RUNNER_TEMP/baseline-src/game/love" "$RUNNER_TEMP/baseline-src/data/worldbuild"
+          cp -a game/love/. "$RUNNER_TEMP/baseline-src/game/love/"
+          cp data/worldbuild/*.json "$RUNNER_TEMP/baseline-src/data/worldbuild/"
+          git show 13931581101fedc7c2868b4c27c642c34eca3de9:game/love/world/terrain_renderer.lua > "$RUNNER_TEMP/baseline-src/game/love/world/terrain_renderer.lua"
+          python3 scripts/build_r2_grass_preview.py "$RUNNER_TEMP/baseline-src" "$RUNNER_TEMP/base-game" "$RUNNER_TEMP/report/Osman_R2_Baseline.love"
+          python3 scripts/r2_operation_instrument.py "$RUNNER_TEMP/base-game"
           luac5.4 -p "$RUNNER_TEMP/op-game/main.lua"
           cd game/love
           lua5.4 tests/player_stage3.lua
@@ -34,14 +41,15 @@ jobs:
           set -euo pipefail
           export OSMAN_R2_PILOT=1 OSMAN_R2_OP_AUDIT=1 OSMAN_R2_OP_FRAMES=180
           export OSMAN_CHUNK_CACHE_PILOT=0
-          for mode in idle player_walk_plain; do
+          for mode in idle player_walk_plain player_walk_optimized; do
             if [[ "$mode" == "idle" ]]; then export OSMAN_R2_OP_MOTION=idle; else export OSMAN_R2_OP_MOTION=player_walk; fi
             export OSMAN_R2_HEIGHT_CACHE=0
+            if [[ "$mode" == "player_walk_optimized" ]]; then game="$RUNNER_TEMP/op-game"; else game="$RUNNER_TEMP/base-game"; fi
             export XDG_DATA_HOME="$RUNNER_TEMP/user-$mode"
             mkdir -p "$XDG_DATA_HOME"
             cd "$RUNNER_TEMP/report"
             timeout 480s xvfb-run -a -s '-screen 0 1280x1800x24' \
-              love "$RUNNER_TEMP/op-game" 2>&1 | tee "$mode.log"
+              love "$game" 2>&1 | tee "$mode.log"
             grep -q 'R2_OPERATION_DONE frames=180' "$mode.log"
             mv R2_OPERATION_FRAMES.csv "$mode-frames.csv"
             mv R2_OPERATION_CALLS.csv "$mode-calls.csv"
@@ -54,7 +62,7 @@ jobs:
           python3 - <<'PY'
           import csv,json,pathlib,statistics
           result={}
-          for name in ("idle","player_walk_plain"):
+          for name in ("idle","player_walk_plain","player_walk_optimized"):
             frames=list(csv.DictReader(open(name+"-frames.csv")))
             calls=list(csv.DictReader(open(name+"-calls.csv")))
             assert len(frames)==180 and len(calls)>0,(name,len(frames),len(calls))
