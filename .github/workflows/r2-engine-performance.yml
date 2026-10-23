@@ -81,7 +81,7 @@ jobs:
           import csv,json,math,pathlib
           from PIL import Image,ImageChops
           out={"environment":"Ubuntu GitHub-hosted LÖVE/Xvfb CPU proxy; matched complete screen-chunk coverage in BOTH modes; navigation test-only 2 real collision queries/frame; not Android/GPU present timing","trials":{},"pairs":[]}
-          keys=("elapsed_ms","input_ms","pick_ms","pick_calls","pick_projected","pick_skipped","draw_other_ms","print_ms","printf_ms","hud_ms","stat_ms","placed_ms","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
+          keys=("elapsed_ms","input_ms","pick_ms","pick_calls","pick_projected","pick_skipped","draw_other_ms","print_ms","printf_ms","hud_ms","stat_ms","placed_ms","foot_hits","foot_misses","update_ms","draw_ms","terrain_ms","stream_ms","objects_ms","drawcalls","texture_mb","lua_kib","cache_hits","cache_misses","pending")
           def pct(a,q):
             a=sorted(a);return round(a[int((len(a)-1)*q)],3)
           for n in (1,2):
@@ -95,6 +95,9 @@ jobs:
               if variant=="optimized":
                 worst_font=max(float(r["print_ms"]) for r in rows)
                 assert worst_font < 3.0, (name,"unexpected runtime glyph upload",worst_font)
+                hits=int(rows[-1]["foot_hits"])
+                misses=int(rows[-1]["foot_misses"])
+                assert hits>misses>0,(name,"static object foot cache inactive",hits,misses)
               out["trials"][name]["first_measured_frame"]={k:round(float(rows[0][k]),3) for k in ("elapsed_ms","objects_ms","object_cold_queries","object_cold_ms","drawcalls")}
             a,b=routes["baseline"],routes["optimized"]
             delta=max(math.hypot(float(x["x"])-float(y["x"]),float(x["y"])-float(y["y"])) for x,y in zip(a,b))
