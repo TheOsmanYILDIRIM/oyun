@@ -32,7 +32,10 @@ function Stream.new(query, opts)
   }, Stream)
 end
 
-local function view_range(camera,width,height,size)
+-- Expand the inverse-screen bounding rectangle for conservative projected
+-- chunk diamonds when viewport_cover is active. The default behaviour and
+-- finite authored world are unchanged; this only widens candidate discovery.
+local function view_range(camera,width,height,size,screen_cover)
   assert(type(width)=="number" and width > 0 and type(height)=="number" and height > 0,
          "invalid viewport")
   local min_x,min_y,max_x,max_y
@@ -43,8 +46,9 @@ local function view_range(camera,width,height,size)
     min_x=math.min(min_x or x,x); min_y=math.min(min_y or y,y)
     max_x=math.max(max_x or x,x); max_y=math.max(max_y or y,y)
   end
-  return math.floor(min_x/size)-1,math.floor(min_y/size)-1,
-         math.floor(max_x/size)+1,math.floor(max_y/size)+1
+  local halo=screen_cover and 4 or 1
+  return math.floor(min_x/size)-halo,math.floor(min_y/size)-halo,
+         math.floor(max_x/size)+halo,math.floor(max_y/size)+halo
 end
 
 -- Screen-space overlap is a diamond bounding box, not centre distance.
@@ -63,7 +67,8 @@ function Stream:needed(camera,width,height)
      and type(camera.x)=="number" and type(camera.y)=="number",
      "camera required")
   local size=self.chunker.size
-  local min_x,min_y,max_x,max_y=view_range(camera,width,height,size)
+  local min_x,min_y,max_x,max_y=view_range(camera,width,height,size,
+    self.viewport_cover==true)
   local candidates={}
   for cy=min_y,max_y do for cx=min_x,max_x do
     local midx,midy=(cx+0.5)*size,(cy+0.5)*size
